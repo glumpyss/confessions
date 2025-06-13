@@ -109,8 +109,8 @@ async def confession(interaction: discord.Interaction, text: str, visibility: st
                              icon_url=interaction.user.avatar.url if interaction.user.avatar else interaction.user.default_avatar.url)
             # No footer needed as author is displayed
 
-        # Added a timestamp for a more modern embed appearance.
-        embed.set_timestamp(interaction.created_at)
+        # Corrected: Assign the timestamp directly to the 'timestamp' attribute
+        embed.timestamp = interaction.created_at
 
         # 4. Send the embed to the confessions channel.
         await confessions_channel.send(embed=embed)
