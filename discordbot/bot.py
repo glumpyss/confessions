@@ -215,14 +215,16 @@ async def play(interaction: discord.Interaction, query: str):
     voice_channel = interaction.user.voice.channel
     voice_client = discord.utils.get(bot.voice_clients, guild__id=interaction.guild.id)
 
-    await interaction.response.defer(ephemeral=False) # Defer immediately
+    # Acknowledge the command immediately to prevent timeouts
+    await interaction.response.defer(ephemeral=False) 
 
     # Attempt to connect/move if not already in the correct channel
     if not voice_client:
         try:
             voice_client = await voice_channel.connect()
             guild_music_queues[interaction.guild.id] = asyncio.Queue()
-            connection_message = f"Joined {voice_channel.name}."
+            # Send initial connection message as a followup
+            await interaction.followup.send(f"Joined {voice_channel.name} to play the song.", ephemeral=False)
         except discord.ClientException:
             await interaction.followup.send("I am unable to join your voice channel. Check my permissions and ensure FFmpeg is installed.")
             return
@@ -232,18 +234,24 @@ async def play(interaction: discord.Interaction, query: str):
             return
     elif voice_client.channel != voice_channel:
         await voice_client.move_to(voice_channel)
-        connection_message = f"Moved to {voice_channel.name}."
+        # Send initial move message as a followup
+        await interaction.followup.send(f"Moved to {voice_channel.name} to play the song.", ephemeral=False)
+        # Ensure queue is initialized if moving to a new channel within the same guild.
+        if interaction.guild.id not in guild_music_queues:
+             guild_music_queues[interaction.guild.id] = asyncio.Queue()
     else:
-        connection_message = "" # No connection message if already there
+        # If already in channel, still send a followup that you're searching
+        await interaction.followup.send(f"Searching for **{query}**...", ephemeral=False)
 
-    # Now, try to process the song after acknowledging the command
+
+    # Now, try to process the song after acknowledging the command and handling connection
     try:
         with yt_dlp.YoutubeDL(YTDL_OPTIONS) as ydl:
             info = await bot.loop.run_in_executor(None, lambda: ydl.extract_info(query, download=False))
             
             if not info:
                 # Specific message if yt-dlp couldn't get info (e.g., bot detection)
-                await interaction.followup.send("Could not find any results for that query. This might be due to an invalid URL/search term, region restrictions, or YouTube's bot detection blocking the request. Please try a different source or search term.")
+                await interaction.followup.send("Could not find any results for that query. This might be due to an invalid URL/search term, region restrictions, or YouTube's bot detection blocking the request. Please try a different source or search term.", ephemeral=False)
                 return
 
             # Handle cases where yt-dlp returns a playlist with a single entry
@@ -253,24 +261,15 @@ async def play(interaction: discord.Interaction, query: str):
             url = info['url']
             title = info.get('title', 'Unknown Title')
 
-            response_content = connection_message # Start with connection message if any
-
-            if voice_client.is_playing() or (interaction.guild.id in guild_music_queues and not guild_music_queues[interaction.guild.id].empty()):
+            if voice_client.is_playing() or not guild_music_queues[interaction.guild.id].empty():
                 await guild_music_queues[interaction.guild.id].put(url)
-                if response_content:
-                    response_content += f"\nAdded **{title}** to the queue!"
-                else:
-                    response_content = f"Added **{title}** to the queue!"
+                # Send follow-up for adding to queue
+                await interaction.followup.send(f"Added **{title}** to the queue!", ephemeral=False)
             else:
                 player = await FFmpegOpusAudio.from_probe(url, **FFMPEG_OPTIONS)
                 voice_client.play(player, after=lambda e: bot.loop.create_task(play_next_song(interaction.guild.id, e)))
-                if response_content:
-                    response_content += f"\nNow playing: **{title}**"
-                else:
-                    response_content = f"Now playing: **{title}**"
-            
-            # Send the consolidated response
-            await interaction.followup.send(response_content, ephemeral=False)
+                # Send follow-up for now playing
+                await interaction.followup.send(f"Now playing: **{title}**", ephemeral=False)
 
     except yt_dlp.utils.DownloadError as e:
         print(f"YTDL Download Error: {e}")
@@ -385,5 +384,4 @@ if __name__ == "__main__":
         print("For deployment, set the environment variable directly on your hosting platform (e.g., Heroku, Railway).")
     else:
         bot.run(DISCORD_BOT_TOKEN)
-
 
