@@ -11,7 +11,7 @@ import discord.utils # Import discord.utils for get()
 load_dotenv()
 
 # --- Bot Configuration ---
-DISCORD_BOT_TOKEN = os.getenv('DISCORD_TOKEN')
+DISCORD_BOT_TOKEN = os.getenv('DISCORD_TOKEN') # Using DISCORD_TOKEN as per your environment variable name
 CONFESSIONS_CHANNEL_ID = 1383002144352894990
 
 # --- YTDLP Options for Music Playback ---
@@ -251,13 +251,13 @@ async def play(interaction: discord.Interaction, query: str):
             # This is good practice for potentially long-running sync operations like this
             info = await bot.loop.run_in_executor(None, lambda: ydl.extract_info(query, download=False))
             
+            if not info: # If info is None, it means yt-dlp failed to get the info
+                await interaction.followup.send("Could not find any results for that query. This might be due to an invalid URL/search term, region restrictions, or YouTube's bot detection blocking the request. Please try a different source or search term.", ephemeral=False)
+                return
+
+            # Handle cases where yt-dlp returns a playlist with a single entry
             if 'entries' in info and info['entries']:
                 info = info['entries'][0]
-
-            if not info:
-                # This could happen if yt-dlp couldn't find anything or was blocked
-                await interaction.followup.send("Could not find any results for that query. It might be blocked by YouTube's bot detection, or is not a valid URL/search term.", ephemeral=False)
-                return
 
             url = info['url']
             title = info.get('title', 'Unknown Title')
@@ -272,14 +272,16 @@ async def play(interaction: discord.Interaction, query: str):
 
     except yt_dlp.utils.DownloadError as e:
         print(f"YTDL Download Error: {e}")
-        # More specific error message for the user
-        if "confirm you’re not a bot" in str(e):
-            await interaction.followup.send("Failed to retrieve song information: YouTube's bot detection blocked the request. Try a different URL or search term.", ephemeral=False)
+        # More specific error message for the user based on known yt-dlp issues
+        if "confirm you’re not a bot" in str(e).lower() or "too many requests" in str(e).lower() or "blocked by youtube" in str(e).lower():
+            await interaction.followup.send("Failed to retrieve song information: YouTube's bot detection or rate limits blocked the request. Please try a different URL or search term, or try again later.", ephemeral=False)
+        elif "private video" in str(e).lower() or "unavailable" in str(e).lower():
+             await interaction.followup.send("Failed to retrieve song information: The video is private, unavailable, or restricted.", ephemeral=False)
         else:
-            await interaction.followup.send(f"Could not download or process audio from the provided query/URL. Error: {e}", ephemeral=False)
+            await interaction.followup.send(f"Could not download or process audio from the provided query/URL due to an error: {e}. Please ensure the URL is valid and publicly accessible.", ephemeral=False)
     except Exception as e:
         print(f"General error in play command: {e}")
-        await interaction.followup.send(f"An unexpected error occurred while trying to play the song. Ensure PyNaCl and FFmpeg are installed and accessible, and try again.", ephemeral=False)
+        await interaction.followup.send(f"An unexpected error occurred while trying to play the song. Ensure PyNaCl and FFmpeg are installed and accessible, and try again. Detailed error: {e}", ephemeral=False)
 
 
 @bot.tree.command(name="pause", description="Pauses the currently playing song.")
@@ -394,5 +396,4 @@ if __name__ == "__main__":
         print("For deployment, set the environment variable directly on your hosting platform (e.g., Heroku, Railway).")
     else:
         bot.run(DISCORD_BOT_TOKEN)
-
 
