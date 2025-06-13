@@ -1,16 +1,24 @@
 import discord
 from discord.ext import commands
 from discord import app_commands # Required for slash commands
+import os # Import the os module to access environment variables
+from dotenv import load_dotenv # Import load_dotenv from python-dotenv
+
+# Load environment variables from .env file (for local development)
+# This line should be at the very top, before accessing any environment variables.
+load_dotenv()
 
 # --- Bot Configuration ---
-# IMPORTANT: Replace 'YOUR_BOT_TOKEN_HERE' with your actual Discord bot token.
-# Get this from the Discord Developer Portal -> Your Application -> Bot -> Token.
-DISCORD_BOT_TOKEN = 'MTM4MzAwMTk4NzUxOTYxNTA4Ng.GZnpM7.7n7zjmreZvYTZJgLbgHj_4mEWKzroA3TVFLB4E' 
+# IMPORTANT: Get your Discord bot token from an environment variable.
+# It will be read from your .env file locally, or directly from your
+# hosting environment's configuration.
+# CHANGED: Now looking for 'DISCORD_TOKEN' as per your setup.
+DISCORD_BOT_TOKEN = os.getenv('DISCORD_TOKEN')
 
 # Replace '1383002144352894990' with the actual ID of your confessions channel.
 # To get a channel ID, enable Developer Mode in Discord (User Settings -> Advanced),
 # then right-click the channel and select 'Copy ID'.
-CONFESSIONS_CHANNEL_ID = 1383002144352894990
+CONFESSIONS_CHANNEL_ID = 1383002144352894990 # Consider making this an environment variable too if it changes per deployment
 
 # --- Bot Setup ---
 # Define the bot's intents. Intents specify which events your bot wants to receive from Discord.
@@ -91,10 +99,11 @@ async def confession(interaction: discord.Interaction, text: str):
         )
 
 # --- Run the Bot ---
-# Ensure your bot token is set before running.
 if __name__ == "__main__":
-    if DISCORD_BOT_TOKEN == 'MTM4MzAwMTk4NzUxOTYxNTA4Ng.GZnpM7.7n7zjmreZvYTZJgLbgHj_4mEWKzroA3TVFLB4E':
-        print("ERROR: Please replace 'BotToken' with your actual Discord bot token.")
-        print("The bot will not start without a valid token.")
+    if DISCORD_BOT_TOKEN is None:
+        print("ERROR: DISCORD_TOKEN environment variable not set.")
+        print("Please set the 'DISCORD_TOKEN' environment variable.")
+        print("For local development, create a .env file in the same directory as bot.py with: DISCORD_TOKEN='YOUR_ACTUAL_TOKEN_HERE'")
+        print("For deployment, set the environment variable directly on your hosting platform (e.g., Heroku, Railway).")
     else:
-        bot.run(MTM4MzAwMTk4NzUxOTYxNTA4Ng.GZnpM7.7n7zjmreZvYTZJgLbgHj_4mEWKzroA3TVFLB4E)
+        bot.run(DISCORD_BOT_TOKEN)
