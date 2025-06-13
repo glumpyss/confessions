@@ -1,37 +1,75 @@
 import discord
 from discord.ext import commands
-from discord import app_commands # Required for slash commands
-import os # Import the os module to access environment variables
-from dotenv import load_dotenv # Import load_dotenv from python-dotenv
+from discord import app_commands, FFmpegOpusAudio # Import FFmpegOpusAudio for playing audio
+import os
+from dotenv import load_dotenv
+import asyncio # For asynchronous operations and queues
+import yt_dlp # For extracting audio information from URLs
 
 # Load environment variables from .env file (for local development)
-# This line should be at the very top, before accessing any environment variables.
 load_dotenv()
 
 # --- Bot Configuration ---
-# IMPORTANT: Get your Discord bot token from an environment variable.
-# It will be read from your .env file locally, or directly from your
-# hosting environment's configuration.
-# CHANGED: Now looking for 'DISCORD_TOKEN' as per your setup.
 DISCORD_BOT_TOKEN = os.getenv('DISCORD_TOKEN')
+CONFESSIONS_CHANNEL_ID = 1383002144352894990
 
-# Replace '1383002144352894990' with the actual ID of your confessions channel.
-# To get a channel ID, enable Developer Mode in Discord (User Settings -> Advanced),
-# then right-click the channel and select 'Copy ID'.
-CONFESSIONS_CHANNEL_ID = 1383002144352894990 # Consider making this an environment variable too if it changes per deployment
+# --- YTDLP Options for Music Playback ---
+# These options tell yt-dlp to extract only audio and format it correctly for discord.py
+YTDL_OPTIONS = {
+    'format': 'bestaudio/best',
+    'postprocessors': [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'opus', # Opus is preferred for Discord voice
+        'preferredquality': '192',
+    }],
+    'extract_flat': 'in_playlist', # Only extract info for top-level entries in playlists
+    'nocheckcertificate': True,
+    'ignoreerrors': True,
+    'logtostderr': False,
+    'quiet': True,
+    'no_warnings': True,
+    'default_search': 'auto',
+    'source_address': '0.0.0.0' # bind to ipv4
+}
+
+# FFmpeg options for discord.py. -vn means no video.
+FFMPEG_OPTIONS = {
+    'options': '-vn'
+}
 
 # --- Bot Setup ---
-# Define the bot's intents. Intents specify which events your bot wants to receive from Discord.
-# discord.Intents.default() provides common intents.
-# message_content intent is crucial for your bot to read message content (though less critical for slash commands).
 intents = discord.Intents.default()
-intents.message_content = True # Necessary for reading message content if you were using traditional commands.
-                               # For slash commands, this intent is less directly used for command input,
-                               # but good practice for general bot functionality.
+intents.message_content = True # Required for listening to messages (though less so for slash commands)
+intents.voice_states = True # Crucial for detecting voice channel changes
 
-# Create a bot instance with a command prefix (not used for slash commands, but required for the Bot class)
-# and the defined intents.
 bot = commands.Bot(command_prefix='!', intents=intents)
+
+# Dictionary to store song queues and voice clients for each guild
+guild_music_queues = {} # {guild_id: asyncio.Queue}
+
+# --- Helper Function to Play Next Song ---
+async def play_next_song(guild_id, error=None):
+    """
+    Called after a song finishes playing. Plays the next song in the queue.
+    """
+    if error:
+        print(f"Player error in guild {guild_id}: {error}")
+        # Consider sending an error message to the channel here
+
+    voice_client = bot.voice_clients[guild_id] if guild_id in bot.voice_clients else None
+    if voice_client and not voice_client.is_playing():
+        try:
+            next_url = guild_music_queues[guild_id].get_nowait()
+            player = await FFmpegOpusAudio.from_probe(next_url, **FFMPEG_OPTIONS)
+            voice_client.play(player, after=lambda e: bot.loop.create_task(play_next_song(guild_id, e)))
+            # You might want to send a message to the channel like "Now playing: [Song Title]"
+        except asyncio.QueueEmpty:
+            print(f"Queue empty for guild {guild_id}. Stopping playback.")
+            # Optionally, disconnect if queue is empty
+            # await voice_client.disconnect()
+            # del guild_music_queues[guild_id]
+        except Exception as e:
+            print(f"Error playing next song in guild {guild_id}: {e}")
 
 # --- Event: Bot is Ready ---
 @bot.event
@@ -44,8 +82,6 @@ async def on_ready():
     print('------')
     try:
         # Sync slash commands with Discord.
-        # This can take a few seconds and might not be instant.
-        # You can sync globally or to specific guilds. Global sync is usually fine for a few commands.
         synced = await bot.tree.sync()
         print(f"Synced {len(synced)} command(s).")
     except Exception as e:
@@ -55,10 +91,8 @@ async def on_ready():
 @bot.tree.command(name="confession", description="Submit an anonymous confession.")
 @app_commands.describe(
     text="The confession you want to submit.",
-    # New: Describe the 'visibility' option
     visibility="Choose whether to submit publicly or anonymously."
 )
-# New: Add choices for the 'visibility' option
 @app_commands.choices(
     visibility=[
         app_commands.Choice(name="Anonymous", value="anonymous"),
@@ -68,19 +102,11 @@ async def on_ready():
 async def confession(interaction: discord.Interaction, text: str, visibility: str):
     """
     Handles the '/confession' slash command.
-    
-    Args:
-        interaction (discord.Interaction): The interaction object from Discord.
-        text (str): The confession text provided by the user.
-        visibility (str): 'anonymous' or 'public', chosen by the user.
     """
-    
-    # 1. Send an ephemeral message to the user confirming their confession was sent.
-    # The message now reflects the chosen visibility.
     confirmation_message = ""
     if visibility == "anonymous":
         confirmation_message = "Your anonymous confession has been sent!"
-    else: # visibility == "public"
+    else:
         confirmation_message = "Your public confession has been sent!"
 
     await interaction.response.send_message(
@@ -88,42 +114,237 @@ async def confession(interaction: discord.Interaction, text: str, visibility: st
         ephemeral=True
     )
 
-    # 2. Get the target channel for confessions.
     confessions_channel = bot.get_channel(CONFESSIONS_CHANNEL_ID)
 
     if confessions_channel:
-        # 3. Create an embed for the confession.
         embed = discord.Embed(
-            title="Confession", # Simplified title
-            description=f"\"**{text}**\"", # Format the confession text
-            color=discord.Color.dark_grey() # Keeping the dark grey for modern look
+            title="Confession",
+            description=f"\"**{text}**\"",
+            color=discord.Color.dark_grey()
         )
         
-        # Adjust embed based on visibility choice
         if visibility == "anonymous":
-            embed.set_footer(text="Submitted anonymously.") # Concise anonymous footer
-        else: # visibility == "public"
-            # For public confessions, set the author to display the user's name and avatar
-            # Using display_name for user's nickname if available, otherwise username
+            embed.set_footer(text="Submitted anonymously.")
+        else:
             embed.set_author(name=interaction.user.display_name, 
                              icon_url=interaction.user.avatar.url if interaction.user.avatar else interaction.user.default_avatar.url)
-            # No footer needed as author is displayed
-
-        # Corrected: Assign the timestamp directly to the 'timestamp' attribute
+        
         embed.timestamp = interaction.created_at
 
-        # 4. Send the embed to the confessions channel.
         await confessions_channel.send(embed=embed)
         print(f"Confession ({visibility}) sent to channel {confessions_channel.name} by {interaction.user.name}")
     else:
-        # If the channel is not found (e.g., incorrect ID, bot not in server)
         print(f"Error: Confessions channel with ID {CONFESSIONS_CHANNEL_ID} not found or accessible.")
-        # Optionally, inform the user if the bot couldn't find the channel.
-        # This message would still be ephemeral.
         await interaction.followup.send(
             "An error occurred while sending your confession. The confessions channel might be misconfigured.",
             ephemeral=True
         )
+
+# --- Music Commands ---
+
+@bot.tree.command(name="join", description="Makes the bot join your current voice channel.")
+async def join(interaction: discord.Interaction):
+    """
+    Makes the bot join the voice channel of the user who invoked the command.
+    """
+    if not interaction.user.voice:
+        return await interaction.response.send_message("You are not in a voice channel!", ephemeral=True)
+
+    voice_channel = interaction.user.voice.channel
+    try:
+        if interaction.guild.id in bot.voice_clients:
+            voice_client = bot.voice_clients[interaction.guild.id]
+            if voice_client.channel == voice_channel:
+                await interaction.response.send_message("I am already in this voice channel!", ephemeral=True)
+            else:
+                await voice_client.move_to(voice_channel)
+                await interaction.response.send_message(f"Moved to {voice_channel.name}!", ephemeral=True)
+        else:
+            voice_client = await voice_channel.connect()
+            bot.voice_clients[interaction.guild.id] = voice_client # Store the voice client
+            guild_music_queues[interaction.guild.id] = asyncio.Queue() # Initialize queue for guild
+            await interaction.response.send_message(f"Joined {voice_channel.name}!", ephemeral=True)
+    except discord.ClientException:
+        await interaction.response.send_message("I am unable to join the voice channel. Check my permissions.", ephemeral=True)
+    except Exception as e:
+        print(f"Error joining voice channel: {e}")
+        await interaction.response.send_message("An unexpected error occurred while trying to join.", ephemeral=True)
+
+
+@bot.tree.command(name="leave", description="Makes the bot leave the current voice channel.")
+async def leave(interaction: discord.Interaction):
+    """
+    Makes the bot leave the voice channel it is currently in for the guild.
+    """
+    voice_client = bot.voice_clients.get(interaction.guild.id)
+
+    if not voice_client:
+        return await interaction.response.send_message("I am not in a voice channel!", ephemeral=True)
+
+    if voice_client.is_playing():
+        voice_client.stop()
+    
+    # Clear the queue for the guild
+    if interaction.guild.id in guild_music_queues:
+        # Clear all items from the queue without waiting
+        while not guild_music_queues[interaction.guild.id].empty():
+            try:
+                guild_music_queues[interaction.guild.id].get_nowait()
+            except asyncio.QueueEmpty:
+                break # Should not happen with empty() check, but good practice
+        del guild_music_queues[interaction.guild.id]
+
+    await voice_client.disconnect()
+    await interaction.response.send_message("Left the voice channel!", ephemeral=True)
+
+
+@bot.tree.command(name="play", description="Plays a song from a URL or search query.")
+@app_commands.describe(query="The URL of the song (e.g., YouTube) or search query.")
+async def play(interaction: discord.Interaction, query: str):
+    """
+    Plays a song from a given URL or search query. Joins if not already in VC.
+    """
+    if not interaction.user.voice:
+        return await interaction.response.send_message("You need to be in a voice channel to use this command!", ephemeral=True)
+
+    voice_channel = interaction.user.voice.channel
+    voice_client = bot.voice_clients.get(interaction.guild.id)
+
+    if not voice_client:
+        # If bot is not in a voice channel, join it
+        try:
+            voice_client = await voice_channel.connect()
+            bot.voice_clients[interaction.guild.id] = voice_client
+            guild_music_queues[interaction.guild.id] = asyncio.Queue()
+        except discord.ClientException:
+            return await interaction.response.send_message("I am unable to join your voice channel. Check my permissions.", ephemeral=True)
+        except Exception as e:
+            print(f"Error connecting to voice channel: {e}")
+            return await interaction.response.send_message("An unexpected error occurred while trying to join for playback.", ephemeral=True)
+    elif voice_client.channel != voice_channel:
+        # If bot is in a different voice channel, move to user's channel
+        await voice_client.move_to(voice_channel)
+        await interaction.followup.send(f"Moved to {voice_channel.name} to play the song.", ephemeral=False)
+
+    await interaction.response.send_message(f"Searching for **{query}**...", ephemeral=True)
+
+    try:
+        with yt_dlp.YoutubeDL(YTDL_OPTIONS) as ydl:
+            # Safely get info. If it's a direct URL, it will fetch. If a query, it will search.
+            info = ydl.extract_info(query, download=False)
+            
+            # For search results, yt-dlp might return a playlist-like structure with one entry.
+            # We want the first entry if it's a list.
+            if 'entries' in info and info['entries']:
+                info = info['entries'][0]
+
+            if not info:
+                return await interaction.followup.send("Could not find any results for that query.", ephemeral=False)
+
+            url = info['url']
+            title = info.get('title', 'Unknown Title')
+
+            if voice_client.is_playing() or not guild_music_queues[interaction.guild.id].empty():
+                await guild_music_queues[interaction.guild.id].put(url)
+                await interaction.followup.send(f"Added **{title}** to the queue!", ephemeral=False)
+            else:
+                player = await FFmpegOpusAudio.from_probe(url, **FFMPEG_OPTIONS)
+                voice_client.play(player, after=lambda e: bot.loop.create_task(play_next_song(interaction.guild.id, e)))
+                await interaction.followup.send(f"Now playing: **{title}**", ephemeral=False)
+
+    except yt_dlp.utils.DownloadError as e:
+        print(f"YTDL Download Error: {e}")
+        await interaction.followup.send(f"Could not download or process audio from the provided query/URL. Error: {e}", ephemeral=False)
+    except Exception as e:
+        print(f"General error in play command: {e}")
+        await interaction.followup.send(f"An unexpected error occurred while trying to play the song. Make sure FFmpeg is installed and accessible.", ephemeral=False)
+
+
+@bot.tree.command(name="pause", description="Pauses the currently playing song.")
+async def pause(interaction: discord.Interaction):
+    """
+    Pauses the currently playing song.
+    """
+    voice_client = bot.voice_clients.get(interaction.guild.id)
+    if voice_client and voice_client.is_playing():
+        voice_client.pause()
+        await interaction.response.send_message("Song paused.", ephemeral=False)
+    else:
+        await interaction.response.send_message("No song is currently playing or paused.", ephemeral=True)
+
+
+@bot.tree.command(name="resume", description="Resumes a paused song.")
+async def resume(interaction: discord.Interaction):
+    """
+    Resumes a paused song.
+    """
+    voice_client = bot.voice_clients.get(interaction.guild.id)
+    if voice_client and voice_client.is_paused():
+        voice_client.resume()
+        await interaction.response.send_message("Song resumed.", ephemeral=False)
+    else:
+        await interaction.response.send_message("No song is currently paused.", ephemeral=True)
+
+
+@bot.tree.command(name="stop", description="Stops the current song and clears the queue.")
+async def stop(interaction: discord.Interaction):
+    """
+    Stops the current song and clears the queue for the guild.
+    """
+    voice_client = bot.voice_clients.get(interaction.guild.id)
+    if voice_client:
+        voice_client.stop()
+        # Clear the queue for the guild
+        if interaction.guild.id in guild_music_queues:
+            while not guild_music_queues[interaction.guild.id].empty():
+                try:
+                    guild_music_queues[interaction.guild.id].get_nowait()
+                except asyncio.QueueEmpty:
+                    break
+        await interaction.response.send_message("Playback stopped and queue cleared.", ephemeral=False)
+    else:
+        await interaction.response.send_message("I am not currently playing anything.", ephemeral=True)
+
+
+@bot.tree.command(name="skip", description="Skips the current song to the next in the queue.")
+async def skip(interaction: discord.Interaction):
+    """
+    Skips the current song to the next in the queue.
+    """
+    voice_client = bot.voice_clients.get(interaction.guild.id)
+    if voice_client and voice_client.is_playing():
+        voice_client.stop() # Stopping the current song triggers the 'after' callback to play next
+        await interaction.response.send_message("Skipping song...", ephemeral=False)
+    else:
+        await interaction.response.send_message("No song is currently playing to skip.", ephemeral=True)
+
+
+@bot.tree.command(name="queue", description="Shows the current song queue.")
+async def show_queue(interaction: discord.Interaction):
+    """
+    Shows the current song queue for the guild.
+    """
+    if interaction.guild.id not in guild_music_queues or guild_music_queues[interaction.guild.id].empty():
+        return await interaction.response.send_message("The music queue is empty.", ephemeral=False)
+
+    queue_list = list(guild_music_queues[interaction.guild.id]._queue) # Access internal queue for listing
+    if not queue_list: # Check again in case of race condition
+        return await interaction.response.send_message("The music queue is empty.", ephemeral=False)
+
+    queue_description = "**Current Queue:**\n"
+    for i, item_url in enumerate(queue_list):
+        # We can't easily get the title from the URL without re-fetching,
+        # so for simplicity, we'll just list them as "Song [number]".
+        queue_description += f"{i+1}. Song from URL\n" # Could enhance this to store titles later
+
+    embed = discord.Embed(
+        title="Music Queue",
+        description=queue_description,
+        color=discord.Color.dark_grey()
+    )
+    embed.set_timestamp(interaction.created_at)
+    await interaction.response.send_message(embed=embed, ephemeral=False)
+
 
 # --- Run the Bot ---
 if __name__ == "__main__":
