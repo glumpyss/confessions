@@ -54,21 +54,37 @@ async def on_ready():
 # --- Slash Command: /confession ---
 @bot.tree.command(name="confession", description="Submit an anonymous confession.")
 @app_commands.describe(
-    text="The confession you want to submit anonymously."
+    text="The confession you want to submit.",
+    # New: Describe the 'visibility' option
+    visibility="Choose whether to submit publicly or anonymously."
 )
-async def confession(interaction: discord.Interaction, text: str):
+# New: Add choices for the 'visibility' option
+@app_commands.choices(
+    visibility=[
+        app_commands.Choice(name="Anonymous", value="anonymous"),
+        app_commands.Choice(name="Public", value="public"),
+    ]
+)
+async def confession(interaction: discord.Interaction, text: str, visibility: str):
     """
     Handles the '/confession' slash command.
     
     Args:
         interaction (discord.Interaction): The interaction object from Discord.
         text (str): The confession text provided by the user.
+        visibility (str): 'anonymous' or 'public', chosen by the user.
     """
     
     # 1. Send an ephemeral message to the user confirming their confession was sent.
-    # ephemeral=True makes the message visible only to the user who invoked the command.
+    # The message now reflects the chosen visibility.
+    confirmation_message = ""
+    if visibility == "anonymous":
+        confirmation_message = "Your anonymous confession has been sent!"
+    else: # visibility == "public"
+        confirmation_message = "Your public confession has been sent!"
+
     await interaction.response.send_message(
-        "Your confession has been sent!",
+        confirmation_message,
         ephemeral=True
     )
 
@@ -77,17 +93,28 @@ async def confession(interaction: discord.Interaction, text: str):
 
     if confessions_channel:
         # 3. Create an embed for the confession.
-        # Embeds are visually appealing message blocks in Discord.
         embed = discord.Embed(
-            title="Anonymous Confession",
+            title="Confession", # Simplified title
             description=f"\"**{text}**\"", # Format the confession text
-            color=discord.Color.dark_red() # Choose a color for the embed
+            color=discord.Color.dark_grey() # Keeping the dark grey for modern look
         )
-        embed.set_footer(text="Confession submitted anonymously.") # A small note at the bottom
+        
+        # Adjust embed based on visibility choice
+        if visibility == "anonymous":
+            embed.set_footer(text="Submitted anonymously.") # Concise anonymous footer
+        else: # visibility == "public"
+            # For public confessions, set the author to display the user's name and avatar
+            # Using display_name for user's nickname if available, otherwise username
+            embed.set_author(name=interaction.user.display_name, 
+                             icon_url=interaction.user.avatar.url if interaction.user.avatar else interaction.user.default_avatar.url)
+            # No footer needed as author is displayed
+
+        # Added a timestamp for a more modern embed appearance.
+        embed.set_timestamp(interaction.created_at)
 
         # 4. Send the embed to the confessions channel.
         await confessions_channel.send(embed=embed)
-        print(f"Confession sent to channel {confessions_channel.name} by {interaction.user.name}")
+        print(f"Confession ({visibility}) sent to channel {confessions_channel.name} by {interaction.user.name}")
     else:
         # If the channel is not found (e.g., incorrect ID, bot not in server)
         print(f"Error: Confessions channel with ID {CONFESSIONS_CHANNEL_ID} not found or accessible.")
@@ -107,3 +134,4 @@ if __name__ == "__main__":
         print("For deployment, set the environment variable directly on your hosting platform (e.g., Heroku, Railway).")
     else:
         bot.run(DISCORD_BOT_TOKEN)
+
