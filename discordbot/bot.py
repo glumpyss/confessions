@@ -5,7 +5,7 @@ from discord import app_commands # Required for slash commands
 # --- Bot Configuration ---
 # IMPORTANT: Replace 'YOUR_BOT_TOKEN_HERE' with your actual Discord bot token.
 # Get this from the Discord Developer Portal -> Your Application -> Bot -> Token.
-DISCORD_BOT_TOKEN = 'YOUR_BOT_TOKEN_HERE' 
+DISCORD_BOT_TOKEN = 'MTM4MzAwMTk4NzUxOTYxNTA4Ng.GZnpM7.7n7zjmreZvYTZJgLbgHj_4mEWKzroA3TVFLB4E' 
 
 # Replace '1383002144352894990' with the actual ID of your confessions channel.
 # To get a channel ID, enable Developer Mode in Discord (User Settings -> Advanced),
