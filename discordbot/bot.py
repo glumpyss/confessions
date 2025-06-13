@@ -93,8 +93,8 @@ async def confession(interaction: discord.Interaction, text: str):
 # --- Run the Bot ---
 # Ensure your bot token is set before running.
 if __name__ == "__main__":
-    if DISCORD_BOT_TOKEN == 'MTM4MzAwMTk4NzUxOTYxNTA4Ng.GyOi8J.vqDhTroTsfcEv81TAL7Zcz0aozOvpMx4cBSl2s':
+    if DISCORD_BOT_TOKEN == 'MTM4MzAwMTk4NzUxOTYxNTA4Ng.GZnpM7.7n7zjmreZvYTZJgLbgHj_4mEWKzroA3TVFLB4E':
         print("ERROR: Please replace 'BotToken' with your actual Discord bot token.")
         print("The bot will not start without a valid token.")
     else:
-        bot.run(MTM4MzAwMTk4NzUxOTYxNTA4Ng.GyOi8J.vqDhTroTsfcEv81TAL7Zcz0aozOvpMx4cBSl2s)
+        bot.run(MTM4MzAwMTk4NzUxOTYxNTA4Ng.GZnpM7.7n7zjmreZvYTZJgLbgHj_4mEWKzroA3TVFLB4E)
