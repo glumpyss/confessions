@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import asyncio
 import yt_dlp
 import discord.utils # Import discord.utils for get()
+import traceback # Import traceback for detailed error logging
 
 # Load environment variables from .env file (for local development)
 load_dotenv()
@@ -68,12 +69,15 @@ async def play_next_song(guild_id, error=None):
                 # If you stored song titles in the queue, you could announce the next song here.
             except asyncio.QueueEmpty:
                 print(f"Queue empty for guild {guild_id}. Stopping playback.")
+                # Optionally disconnect if queue is empty and bot has been idle for a while
             except Exception as e:
-                print(f"Error playing next song in guild {guild_id}: {e}")
+                # Log detailed traceback for unexpected errors in play_next_song
+                print(f"Error playing next song in guild {guild_id}: {e}\n{traceback.format_exc()}")
         else:
-            print(f"No more songs in queue or queue does not exist for guild {guild_id}.")
-
-
+            print(f"No more songs in queue or queue does not exist for guild {guild_id}. Stopping playback if idle.")
+            # If the bot is idle and queue is empty, consider disconnecting after a timeout
+            # e.g., await asyncio.sleep(300) and then check if still idle before disconnecting
+            
 # --- Event: Bot is Ready ---
 @bot.event
 async def on_ready():
@@ -172,7 +176,7 @@ async def join(interaction: discord.Interaction):
     except discord.ClientException:
         await interaction.followup.send("I am unable to join the voice channel. Check my permissions and ensure FFmpeg is installed.")
     except Exception as e:
-        print(f"Error joining voice channel: {e}")
+        print(f"Error joining voice channel: {e}\n{traceback.format_exc()}") # Log traceback
         await interaction.followup.send("An unexpected error occurred while trying to join.")
 
 
@@ -229,7 +233,7 @@ async def play(interaction: discord.Interaction, query: str):
             await interaction.followup.send("I am unable to join your voice channel. Check my permissions and ensure FFmpeg is installed.")
             return
         except Exception as e:
-            print(f"Error connecting to voice channel for play command: {e}")
+            print(f"Error connecting to voice channel for play command: {e}\n{traceback.format_exc()}") # Log traceback
             await interaction.followup.send("An unexpected error occurred while trying to join for playback.")
             return
     elif voice_client.channel != voice_channel:
@@ -241,7 +245,9 @@ async def play(interaction: discord.Interaction, query: str):
              guild_music_queues[interaction.guild.id] = asyncio.Queue()
     else:
         # If already in channel, still send a followup that you're searching
-        await interaction.followup.send(f"Searching for **{query}**...", ephemeral=False)
+        # Only send this if no other connection message was sent.
+        if not interaction.response.is_done(): # Check if initial deferral was the only response
+            await interaction.followup.send(f"Searching for **{query}**...", ephemeral=False)
 
 
     # Now, try to process the song after acknowledging the command and handling connection
@@ -249,9 +255,8 @@ async def play(interaction: discord.Interaction, query: str):
         with yt_dlp.YoutubeDL(YTDL_OPTIONS) as ydl:
             info = await bot.loop.run_in_executor(None, lambda: ydl.extract_info(query, download=False))
             
-            if not info:
-                # Specific message if yt-dlp couldn't get info (e.g., bot detection)
-                await interaction.followup.send("Could not find any results for that query. This might be due to an invalid URL/search term, region restrictions, or YouTube's bot detection blocking the request. Please try a different source or search term.", ephemeral=False)
+            if not info: # If info is None, it means yt-dlp failed to get the info
+                await interaction.followup.send("Could not find any results for that query. This might be due to an invalid URL/search term, region restrictions, or the source's bot detection blocking the request. Please try a different source or search term.", ephemeral=False)
                 return
 
             # Handle cases where yt-dlp returns a playlist with a single entry
@@ -261,26 +266,25 @@ async def play(interaction: discord.Interaction, query: str):
             url = info['url']
             title = info.get('title', 'Unknown Title')
 
+            # Consolidate response to avoid "Unknown Message"
             if voice_client.is_playing() or not guild_music_queues[interaction.guild.id].empty():
                 await guild_music_queues[interaction.guild.id].put(url)
-                # Send follow-up for adding to queue
                 await interaction.followup.send(f"Added **{title}** to the queue!", ephemeral=False)
             else:
                 player = await FFmpegOpusAudio.from_probe(url, **FFMPEG_OPTIONS)
                 voice_client.play(player, after=lambda e: bot.loop.create_task(play_next_song(interaction.guild.id, e)))
-                # Send follow-up for now playing
                 await interaction.followup.send(f"Now playing: **{title}**", ephemeral=False)
 
     except yt_dlp.utils.DownloadError as e:
-        print(f"YTDL Download Error: {e}")
+        print(f"YTDL Download Error: {e}\n{traceback.format_exc()}") # Log traceback
         if "confirm you’re not a bot" in str(e).lower() or "too many requests" in str(e).lower() or "blocked by youtube" in str(e).lower():
-            await interaction.followup.send("Failed to retrieve song information: YouTube's bot detection or rate limits blocked the request. Please try a different URL or search term, or try again later.", ephemeral=False)
+            await interaction.followup.send("Failed to retrieve song information: The source's bot detection or rate limits blocked the request (e.g., YouTube). Please try a different URL or search term, or try again later.", ephemeral=False)
         elif "private video" in str(e).lower() or "unavailable" in str(e).lower() or "not available in your country" in str(e).lower():
              await interaction.followup.send("Failed to retrieve song information: The video is private, unavailable, or restricted.", ephemeral=False)
         else:
             await interaction.followup.send(f"Could not download or process audio from the provided query/URL due to an error: {e}. Please ensure the URL is valid and publicly accessible.", ephemeral=False)
     except Exception as e:
-        print(f"General error in play command: {e}")
+        print(f"General error in play command: {e}\n{traceback.format_exc()}") # Log traceback
         await interaction.followup.send(f"An unexpected error occurred while trying to play the song. Ensure PyNaCl and FFmpeg are installed and accessible, and try again. Detailed error: {e}", ephemeral=False)
 
 
