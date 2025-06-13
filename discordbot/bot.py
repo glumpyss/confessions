@@ -1,35 +1,35 @@
 import discord
 from discord.ext import commands
-from discord import app_commands, FFmpegOpusAudio # Import FFmpegOpusAudio for playing audio
+from discord import app_commands, FFmpegOpusAudio
 import os
 from dotenv import load_dotenv
-import asyncio # For asynchronous operations and queues
-import yt_dlp # For extracting audio information from URLs
+import asyncio
+import yt_dlp
+import discord.utils # Import discord.utils for get()
 
 # Load environment variables from .env file (for local development)
 load_dotenv()
 
 # --- Bot Configuration ---
-DISCORD_BOT_TOKEN = os.getenv('DISCORD_TOKEN')
+DISCORD_BOT_TOKEN = os.getenv('DISCORD_TOKEN') # Using DISCORD_TOKEN as per your environment variable name
 CONFESSIONS_CHANNEL_ID = 1383002144352894990
 
 # --- YTDLP Options for Music Playback ---
-# These options tell yt-dlp to extract only audio and format it correctly for discord.py
 YTDL_OPTIONS = {
     'format': 'bestaudio/best',
     'postprocessors': [{
         'key': 'FFmpegExtractAudio',
-        'preferredcodec': 'opus', # Opus is preferred for Discord voice
+        'preferredcodec': 'opus',
         'preferredquality': '192',
     }],
-    'extract_flat': 'in_playlist', # Only extract info for top-level entries in playlists
+    'extract_flat': 'in_playlist',
     'nocheckcertificate': True,
     'ignoreerrors': True,
     'logtostderr': False,
     'quiet': True,
     'no_warnings': True,
     'default_search': 'auto',
-    'source_address': '0.0.0.0' # bind to ipv4
+    'source_address': '0.0.0.0'
 }
 
 # FFmpeg options for discord.py. -vn means no video.
@@ -39,12 +39,12 @@ FFMPEG_OPTIONS = {
 
 # --- Bot Setup ---
 intents = discord.Intents.default()
-intents.message_content = True # Required for listening to messages (though less so for slash commands)
+intents.message_content = True
 intents.voice_states = True # Crucial for detecting voice channel changes
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# Dictionary to store song queues and voice clients for each guild
+# Dictionary to store song queues for each guild
 guild_music_queues = {} # {guild_id: asyncio.Queue}
 
 # --- Helper Function to Play Next Song ---
@@ -56,20 +56,23 @@ async def play_next_song(guild_id, error=None):
         print(f"Player error in guild {guild_id}: {error}")
         # Consider sending an error message to the channel here
 
-    voice_client = bot.voice_clients[guild_id] if guild_id in bot.voice_clients else None
+    # Corrected: Use discord.utils.get to find the voice client
+    voice_client = discord.utils.get(bot.voice_clients, guild__id=guild_id)
+    
     if voice_client and not voice_client.is_playing():
-        try:
-            next_url = guild_music_queues[guild_id].get_nowait()
-            player = await FFmpegOpusAudio.from_probe(next_url, **FFMPEG_OPTIONS)
-            voice_client.play(player, after=lambda e: bot.loop.create_task(play_next_song(guild_id, e)))
-            # You might want to send a message to the channel like "Now playing: [Song Title]"
-        except asyncio.QueueEmpty:
-            print(f"Queue empty for guild {guild_id}. Stopping playback.")
-            # Optionally, disconnect if queue is empty
-            # await voice_client.disconnect()
-            # del guild_music_queues[guild_id]
-        except Exception as e:
-            print(f"Error playing next song in guild {guild_id}: {e}")
+        if guild_id in guild_music_queues and not guild_music_queues[guild_id].empty():
+            try:
+                next_url = guild_music_queues[guild_id].get_nowait()
+                player = await FFmpegOpusAudio.from_probe(next_url, **FFMPEG_OPTIONS)
+                voice_client.play(player, after=lambda e: bot.loop.create_task(play_next_song(guild_id, e)))
+                # You might want to send a message to the channel like "Now playing: [Song Title]"
+            except asyncio.QueueEmpty:
+                print(f"Queue empty for guild {guild_id}. Stopping playback.")
+            except Exception as e:
+                print(f"Error playing next song in guild {guild_id}: {e}")
+        else:
+            print(f"No more songs in queue or queue does not exist for guild {guild_id}.")
+
 
 # --- Event: Bot is Ready ---
 @bot.event
@@ -81,7 +84,6 @@ async def on_ready():
     print(f'Logged in as {bot.user.name} ({bot.user.id})')
     print('------')
     try:
-        # Sync slash commands with Discord.
         synced = await bot.tree.sync()
         print(f"Synced {len(synced)} command(s).")
     except Exception as e:
@@ -151,21 +153,23 @@ async def join(interaction: discord.Interaction):
         return await interaction.response.send_message("You are not in a voice channel!", ephemeral=True)
 
     voice_channel = interaction.user.voice.channel
+    
+    # Corrected: Use discord.utils.get to find the voice client
+    voice_client = discord.utils.get(bot.voice_clients, guild__id=interaction.guild.id)
+
     try:
-        if interaction.guild.id in bot.voice_clients:
-            voice_client = bot.voice_clients[interaction.guild.id]
+        if voice_client: # If bot is already in a voice channel
             if voice_client.channel == voice_channel:
                 await interaction.response.send_message("I am already in this voice channel!", ephemeral=True)
             else:
                 await voice_client.move_to(voice_channel)
                 await interaction.response.send_message(f"Moved to {voice_channel.name}!", ephemeral=True)
-        else:
+        else: # If bot is not in any voice channel in this guild
             voice_client = await voice_channel.connect()
-            bot.voice_clients[interaction.guild.id] = voice_client # Store the voice client
             guild_music_queues[interaction.guild.id] = asyncio.Queue() # Initialize queue for guild
             await interaction.response.send_message(f"Joined {voice_channel.name}!", ephemeral=True)
     except discord.ClientException:
-        await interaction.response.send_message("I am unable to join the voice channel. Check my permissions.", ephemeral=True)
+        await interaction.response.send_message("I am unable to join the voice channel. Check my permissions and ensure FFmpeg is installed.", ephemeral=True)
     except Exception as e:
         print(f"Error joining voice channel: {e}")
         await interaction.response.send_message("An unexpected error occurred while trying to join.", ephemeral=True)
@@ -176,7 +180,8 @@ async def leave(interaction: discord.Interaction):
     """
     Makes the bot leave the voice channel it is currently in for the guild.
     """
-    voice_client = bot.voice_clients.get(interaction.guild.id)
+    # Corrected: Use discord.utils.get to find the voice client
+    voice_client = discord.utils.get(bot.voice_clients, guild__id=interaction.guild.id)
 
     if not voice_client:
         return await interaction.response.send_message("I am not in a voice channel!", ephemeral=True)
@@ -186,12 +191,11 @@ async def leave(interaction: discord.Interaction):
     
     # Clear the queue for the guild
     if interaction.guild.id in guild_music_queues:
-        # Clear all items from the queue without waiting
         while not guild_music_queues[interaction.guild.id].empty():
             try:
                 guild_music_queues[interaction.guild.id].get_nowait()
             except asyncio.QueueEmpty:
-                break # Should not happen with empty() check, but good practice
+                break
         del guild_music_queues[interaction.guild.id]
 
     await voice_client.disconnect()
@@ -208,33 +212,31 @@ async def play(interaction: discord.Interaction, query: str):
         return await interaction.response.send_message("You need to be in a voice channel to use this command!", ephemeral=True)
 
     voice_channel = interaction.user.voice.channel
-    voice_client = bot.voice_clients.get(interaction.guild.id)
+    # Corrected: Use discord.utils.get to find the voice client
+    voice_client = discord.utils.get(bot.voice_clients, guild__id=interaction.guild.id)
 
     if not voice_client:
-        # If bot is not in a voice channel, join it
         try:
             voice_client = await voice_channel.connect()
-            bot.voice_clients[interaction.guild.id] = voice_client
             guild_music_queues[interaction.guild.id] = asyncio.Queue()
         except discord.ClientException:
-            return await interaction.response.send_message("I am unable to join your voice channel. Check my permissions.", ephemeral=True)
+            return await interaction.response.send_message("I am unable to join your voice channel. Check my permissions and ensure FFmpeg is installed.", ephemeral=True)
         except Exception as e:
-            print(f"Error connecting to voice channel: {e}")
-            return await interaction.response.send_message("An unexpected error occurred while trying to join for playback.", ephemeral=True)
+            print(f"Error connecting to voice channel for play command: {e}")
+            await interaction.response.send_message("An unexpected error occurred while trying to join for playback.", ephemeral=True)
+            return # Exit function if connection failed
     elif voice_client.channel != voice_channel:
-        # If bot is in a different voice channel, move to user's channel
         await voice_client.move_to(voice_channel)
         await interaction.followup.send(f"Moved to {voice_channel.name} to play the song.", ephemeral=False)
+        # Ensure queue is initialized if moving to a new channel within the same guild,
+        # though it should ideally persist across moves within the same guild.
 
     await interaction.response.send_message(f"Searching for **{query}**...", ephemeral=True)
 
     try:
         with yt_dlp.YoutubeDL(YTDL_OPTIONS) as ydl:
-            # Safely get info. If it's a direct URL, it will fetch. If a query, it will search.
             info = ydl.extract_info(query, download=False)
             
-            # For search results, yt-dlp might return a playlist-like structure with one entry.
-            # We want the first entry if it's a list.
             if 'entries' in info and info['entries']:
                 info = info['entries'][0]
 
@@ -244,7 +246,7 @@ async def play(interaction: discord.Interaction, query: str):
             url = info['url']
             title = info.get('title', 'Unknown Title')
 
-            if voice_client.is_playing() or not guild_music_queues[interaction.guild.id].empty():
+            if voice_client.is_playing() or (interaction.guild.id in guild_music_queues and not guild_music_queues[interaction.guild.id].empty()):
                 await guild_music_queues[interaction.guild.id].put(url)
                 await interaction.followup.send(f"Added **{title}** to the queue!", ephemeral=False)
             else:
@@ -257,7 +259,7 @@ async def play(interaction: discord.Interaction, query: str):
         await interaction.followup.send(f"Could not download or process audio from the provided query/URL. Error: {e}", ephemeral=False)
     except Exception as e:
         print(f"General error in play command: {e}")
-        await interaction.followup.send(f"An unexpected error occurred while trying to play the song. Make sure FFmpeg is installed and accessible.", ephemeral=False)
+        await interaction.followup.send(f"An unexpected error occurred while trying to play the song. Ensure PyNaCl and FFmpeg are installed and accessible.", ephemeral=False)
 
 
 @bot.tree.command(name="pause", description="Pauses the currently playing song.")
@@ -265,7 +267,8 @@ async def pause(interaction: discord.Interaction):
     """
     Pauses the currently playing song.
     """
-    voice_client = bot.voice_clients.get(interaction.guild.id)
+    # Corrected: Use discord.utils.get to find the voice client
+    voice_client = discord.utils.get(bot.voice_clients, guild__id=interaction.guild.id)
     if voice_client and voice_client.is_playing():
         voice_client.pause()
         await interaction.response.send_message("Song paused.", ephemeral=False)
@@ -278,7 +281,8 @@ async def resume(interaction: discord.Interaction):
     """
     Resumes a paused song.
     """
-    voice_client = bot.voice_clients.get(interaction.guild.id)
+    # Corrected: Use discord.utils.get to find the voice client
+    voice_client = discord.utils.get(bot.voice_clients, guild__id=interaction.guild.id)
     if voice_client and voice_client.is_paused():
         voice_client.resume()
         await interaction.response.send_message("Song resumed.", ephemeral=False)
@@ -291,16 +295,17 @@ async def stop(interaction: discord.Interaction):
     """
     Stops the current song and clears the queue for the guild.
     """
-    voice_client = bot.voice_clients.get(interaction.guild.id)
+    # Corrected: Use discord.utils.get to find the voice client
+    voice_client = discord.utils.get(bot.voice_clients, guild__id=interaction.guild.id)
     if voice_client:
         voice_client.stop()
-        # Clear the queue for the guild
         if interaction.guild.id in guild_music_queues:
             while not guild_music_queues[interaction.guild.id].empty():
                 try:
                     guild_music_queues[interaction.guild.id].get_nowait()
                 except asyncio.QueueEmpty:
                     break
+            del guild_music_queues[interaction.guild.id] # Delete queue after clearing
         await interaction.response.send_message("Playback stopped and queue cleared.", ephemeral=False)
     else:
         await interaction.response.send_message("I am not currently playing anything.", ephemeral=True)
@@ -311,7 +316,8 @@ async def skip(interaction: discord.Interaction):
     """
     Skips the current song to the next in the queue.
     """
-    voice_client = bot.voice_clients.get(interaction.guild.id)
+    # Corrected: Use discord.utils.get to find the voice client
+    voice_client = discord.utils.get(bot.voice_clients, guild__id=interaction.guild.id)
     if voice_client and voice_client.is_playing():
         voice_client.stop() # Stopping the current song triggers the 'after' callback to play next
         await interaction.response.send_message("Skipping song...", ephemeral=False)
@@ -327,15 +333,17 @@ async def show_queue(interaction: discord.Interaction):
     if interaction.guild.id not in guild_music_queues or guild_music_queues[interaction.guild.id].empty():
         return await interaction.response.send_message("The music queue is empty.", ephemeral=False)
 
-    queue_list = list(guild_music_queues[interaction.guild.id]._queue) # Access internal queue for listing
-    if not queue_list: # Check again in case of race condition
+    # Convert the asyncio.Queue to a list for iteration and display
+    queue_items = list(guild_music_queues[interaction.guild.id]._queue)
+
+    if not queue_items:
         return await interaction.response.send_message("The music queue is empty.", ephemeral=False)
 
     queue_description = "**Current Queue:**\n"
-    for i, item_url in enumerate(queue_list):
-        # We can't easily get the title from the URL without re-fetching,
-        # so for simplicity, we'll just list them as "Song [number]".
-        queue_description += f"{i+1}. Song from URL\n" # Could enhance this to store titles later
+    for i, item_url in enumerate(queue_items):
+        # For simplicity, just show as "Song [number]". Enhancing to show actual titles
+        # would require storing titles in the queue along with URLs.
+        queue_description += f"{i+1}. Song from URL\n" 
 
     embed = discord.Embed(
         title="Music Queue",
