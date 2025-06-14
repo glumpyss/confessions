@@ -344,11 +344,26 @@ async def gag_stock(interaction: discord.Interaction):
                 response.raise_for_status() # Raise an exception for bad status codes (4xx or 5xx)
                 data = await response.json()
 
-        # Corrected: Use the exact camelCase keys from the API response
-        seed_stock = data.get('seedStock', 'N/A')
-        egg_stock = data.get('eggStock', 'N/A')         
-        gear_stock = data.get('gearStock', 'N/A')       
+        # Extract stock lists
+        seed_items = data.get('seedStock', [])
+        egg_items = data.get('eggStock', [])         
+        gear_items = data.get('gearStock', [])       
         
+        # Format stock lists into readable strings
+        def format_stock_list(items):
+            if not items:
+                return "None in stock"
+            
+            # Use a list comprehension to build the string for each item
+            # Format: "Item Name (Quantity)"
+            formatted_list = [f"- {item.get('name', 'Unknown')} ({item.get('value', 'N/A')})" 
+                              for item in items if item and item.get('name')]
+            return "\n".join(formatted_list)
+
+        formatted_seed_stock = format_stock_list(seed_items)
+        formatted_egg_stock = format_stock_list(egg_items)
+        formatted_gear_stock = format_stock_list(gear_items)
+
         # Create a clean, modern embed with inline fields
         embed = discord.Embed(
             title="Gag Stock Information",
@@ -357,10 +372,9 @@ async def gag_stock(interaction: discord.Interaction):
         )
 
         # Add fields only for the requested stock types with the desired names
-        embed.add_field(name="Seed Name", value=seed_stock, inline=True)
-        embed.add_field(name="Egg Name", value=egg_stock, inline=True)
-        embed.add_field(name="Gear Name", value=gear_stock, inline=True)
-        # Note: 'honeyshopStock' is excluded as per the user's request
+        embed.add_field(name="Seed Stock", value=formatted_seed_stock, inline=True)
+        embed.add_field(name="Egg Stock", value=formatted_egg_stock, inline=True)
+        embed.add_field(name="Gear Stock", value=formatted_gear_stock, inline=True)
 
         await interaction.followup.send(embed=embed, ephemeral=True)
 
