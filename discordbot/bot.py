@@ -345,20 +345,35 @@ async def gag_stock(interaction: discord.Interaction):
                 data = await response.json()
 
         # Extract stock lists
+        # Use .get() with an empty list default to handle cases where a key might be missing
         seed_items = data.get('seedStock', [])
         egg_items = data.get('eggStock', [])         
         gear_items = data.get('gearStock', [])       
         
         # Format stock lists into readable strings
-        def format_stock_list(items):
-            if not items:
+        def format_stock_list(items_data):
+            if not isinstance(items_data, list):
+                # This should ideally not happen if data.get() provides [] as default
+                return "Data format error" 
+            if not items_data:
                 return "None in stock"
             
-            # Use a list comprehension to build the string for each item
-            # Format: "Item Name (Quantity)"
-            formatted_list = [f"- {item.get('name', 'Unknown')} ({item.get('value', 'N/A')})" 
-                              for item in items if item and item.get('name')]
-            return "\n".join(formatted_list)
+            formatted_items = []
+            for item in items_data:
+                # Ensure each item is a dictionary and has 'name' and 'value' keys
+                if isinstance(item, dict) and 'name' in item and 'value' in item:
+                    name = item['name']
+                    value = item['value']
+                    formatted_items.append(f"- {name} ({value})")
+                else:
+                    # Log if an individual item is malformed within the list
+                    print(f"Skipping malformed item in stock list: {item}")
+            
+            # If the list was not empty but no valid items were found after filtering
+            if not formatted_items:
+                return "None in stock (or all items malformed)" 
+            
+            return "\n".join(formatted_items)
 
         formatted_seed_stock = format_stock_list(seed_items)
         formatted_egg_stock = format_stock_list(egg_items)
@@ -367,8 +382,8 @@ async def gag_stock(interaction: discord.Interaction):
         # Create a clean, modern embed with inline fields
         embed = discord.Embed(
             title="Gag Stock Information",
-            color=discord.Color.dark_grey(), # Keeping the consistent dark grey color
-            timestamp=interaction.created_at # Add timestamp for modern look
+            color=discord.Color.dark_grey(),
+            timestamp=interaction.created_at
         )
 
         # Add fields only for the requested stock types with the desired names
