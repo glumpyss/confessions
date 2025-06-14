@@ -253,8 +253,9 @@ async def join(interaction: discord.Interaction):
             voice_client = await voice_channel.connect()
             guild_music_queues[interaction.guild.id] = asyncio.Queue()
             await interaction.followup.send(f"Joined {voice_channel.name}!")
-    except discord.ClientException:
-        await interaction.followup.send("I am unable to join the voice channel. Check my permissions and ensure FFmpeg is installed.")
+    except discord.ClientException as e:
+        print(f"ClientException during voice channel connection: {e}\n{traceback.format_exc()}")
+        await interaction.followup.send(f"I encountered a permissions issue or other client error while trying to join the voice channel. Please check my permissions in '{voice_channel.name}' and the server. Detailed error: {e}", ephemeral=True)
     except Exception as e:
         print(f"Error joining voice channel: {e}\n{traceback.format_exc()}")
         await interaction.followup.send("An unexpected error occurred while trying to join.")
@@ -545,7 +546,7 @@ async def gag_stock(interaction: discord.Interaction):
         
         # --- DEBUG PRINT STATEMENT for Raw Seed Stock ---
         print(f"Raw seedsStock from API: {seeds_stock_data}")
-        # --- END DEBUG PRINT STATEMENT ---
+        # --- END DEBUG STATEMENT ---
 
         def format_stock_list(items_data):
             """Helper function to format a list of stock items into a readable string."""
@@ -640,5 +641,4 @@ if __name__ == "__main__":
         print("For local development, create a .env file in the same directory as bot.py with: DISCORD_TOKEN='YOUR_ACTUAL_TOKEN_HERE'")
     else:
         bot.run(DISCORD_BOT_TOKEN)
-
 
