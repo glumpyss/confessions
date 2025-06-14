@@ -8,6 +8,7 @@ import yt_dlp
 import discord.utils
 import traceback
 import aiohttp # Import aiohttp for making HTTP requests
+import time # Import time module for performance logging
 
 # Load environment variables from .env file (for local development)
 load_dotenv()
@@ -250,7 +251,11 @@ async def join(interaction: discord.Interaction):
                 await voice_client.move_to(voice_channel)
                 await interaction.followup.send(f"Moved to {voice_channel.name}!")
         else:
+            print(f"DEBUG: Attempting to connect to voice channel '{voice_channel.name}'...")
+            start_time = time.time()
             voice_client = await voice_channel.connect()
+            end_time = time.time()
+            print(f"DEBUG: Connected to voice channel in {end_time - start_time:.2f} seconds.")
             guild_music_queues[interaction.guild.id] = asyncio.Queue()
             await interaction.followup.send(f"Joined {voice_channel.name}!")
     except discord.ClientException as e:
@@ -326,60 +331,69 @@ async def play(interaction: discord.Interaction, query: str):
             await interaction.followup.send(f"Searching for **{query}**...", ephemeral=False)
 
     try:
+        print(f"DEBUG: Starting yt-dlp info extraction for '{query}'...")
+        start_time_yt = time.time()
         with yt_dlp.YoutubeDL(YTDL_OPTIONS) as ydl:
             info = await bot.loop.run_in_executor(None, lambda: ydl.extract_info(query, download=False))
+        end_time_yt = time.time()
+        print(f"DEBUG: yt-dlp info extraction finished in {end_time_yt - start_time_yt:.2f} seconds.")
             
-            if not info:
-                await interaction.followup.send("Could not find any results for that query. This might be due to an invalid URL/search term, region restrictions, or the source's bot detection blocking the request. Please try a different source or search term.", ephemeral=False)
-                return
+        if not info:
+            await interaction.followup.send("Could not find any results for that query. This might be due to an invalid URL/search term, region restrictions, or the source's bot detection blocking the request. Please try a different source or search term.", ephemeral=False)
+            return
 
-            if 'entries' in info and info['entries']:
-                # If it's a playlist or search result, take the first entry
-                info = info['entries'][0]
-            elif 'webpage_url' in info: # If it's a direct video link, info is already the video.
-                pass
-            else:
-                await interaction.followup.send("Could not extract video information from the provided query. Please try a different URL or search term.", ephemeral=False)
-                return
+        if 'entries' in info and info['entries']:
+            # If it's a playlist or search result, take the first entry
+            info = info['entries'][0]
+        elif 'webpage_url' in info: # If it's a direct video link, info is already the video.
+            pass
+        else:
+            await interaction.followup.send("Could not extract video information from the provided query. Please try a different URL or search term.", ephemeral=False)
+            return
 
-            url = info['url']
-            title = info.get('title', 'Unknown Title')
-            uploader = info.get('uploader', 'Unknown Uploader')
-            duration_seconds = info.get('duration')
-            webpage_url = info.get('webpage_url', url) # Fallback to url if webpage_url is missing
+        url = info['url']
+        title = info.get('title', 'Unknown Title')
+        uploader = info.get('uploader', 'Unknown Uploader')
+        duration_seconds = info.get('duration')
+        webpage_url = info.get('webpage_url', url) # Fallback to url if webpage_url is missing
 
-            song_data = {
-                'url': url,
-                'title': title,
-                'uploader': uploader,
-                'duration': duration_seconds,
-                'webpage_url': webpage_url
-            }
+        song_data = {
+            'url': url,
+            'title': title,
+            'uploader': uploader,
+            'duration': duration_seconds,
+            'webpage_url': webpage_url
+        }
 
-            # --- Critical check for voice connection before attempting to play ---
-            if voice_client and not voice_client.is_connected():
-                await interaction.followup.send("I tried to play, but I'm no longer connected to the voice channel. Please try `/join` first.", ephemeral=False)
-                print(f"DEBUG: Bot not connected to voice when attempting to play in guild {interaction.guild.id} (before starting playback).")
-                return # Exit the command since we can't play if disconnected.
+        # --- Critical check for voice connection before attempting to play ---
+        if voice_client and not voice_client.is_connected():
+            await interaction.followup.send("I tried to play, but I'm no longer connected to the voice channel. Please try `/join` first.", ephemeral=False)
+            print(f"DEBUG: Bot not connected to voice when attempting to play in guild {interaction.guild.id} (before starting playback).")
+            return # Exit the command since we can't play if disconnected.
 
-            if voice_client and (voice_client.is_playing() or (interaction.guild.id in guild_music_queues and not guild_music_queues[interaction.guild.id].empty())):
-                await guild_music_queues[interaction.guild.id].put(song_data) # Store full song_data
-                await interaction.followup.send(f"Added **{title}** to the queue!", ephemeral=False)
-            elif voice_client: # Only attempt to play if voice_client is valid and connected
-                try:
-                    player = await FFmpegOpusAudio.from_probe(url, **FFMPEG_OPTIONS)
-                    voice_client.play(player, after=lambda e: bot.loop.create_task(play_next_song(interaction.guild.id, e)))
-                    now_playing_info[interaction.guild.id] = song_data # Store current playing song info
-                    await interaction.followup.send(f"Now playing: **{title}**", ephemeral=False)
-                    print(f"DEBUG: Now playing initiated for guild {interaction.guild.id}: {title}")
-                except discord.ClientException as ce:
-                    print(f"ClientException during voice_client.play: {ce}\n{traceback.format_exc()}")
-                    await interaction.followup.send(f"Failed to start playback. It seems I lost connection to voice. Please try `/join` again and then `/play`.", ephemeral=False)
-                except Exception as e:
-                    print(f"General error during voice_client.play: {e}\n{traceback.format_exc()}")
-                    await interaction.followup.send(f"An unexpected error occurred while trying to play the song: {e}", ephemeral=False)
-            else:
-                await interaction.followup.send("I'm not in a voice channel or there was an issue getting connected. Please try `/join` first.", ephemeral=False)
+        if voice_client and (voice_client.is_playing() or (interaction.guild.id in guild_music_queues and not guild_music_queues[interaction.guild.id].empty())):
+            await guild_music_queues[interaction.guild.id].put(song_data) # Store full song_data
+            await interaction.followup.send(f"Added **{title}** to the queue!", ephemeral=False)
+        elif voice_client: # Only attempt to play if voice_client is valid and connected
+            try:
+                print(f"DEBUG: Starting FFmpegOpusAudio.from_probe for '{title}'...")
+                start_time_ffmpeg = time.time()
+                player = await FFmpegOpusAudio.from_probe(url, **FFMPEG_OPTIONS)
+                end_time_ffmpeg = time.time()
+                print(f"DEBUG: FFmpegOpusAudio.from_probe finished in {end_time_ffmpeg - start_time_ffmpeg:.2f} seconds.")
+
+                voice_client.play(player, after=lambda e: bot.loop.create_task(play_next_song(interaction.guild.id, e)))
+                now_playing_info[interaction.guild.id] = song_data # Store current playing song info
+                await interaction.followup.send(f"Now playing: **{title}**", ephemeral=False)
+                print(f"DEBUG: Now playing initiated for guild {interaction.guild.id}: {title}")
+            except discord.ClientException as ce:
+                print(f"ClientException during voice_client.play: {ce}\n{traceback.format_exc()}")
+                await interaction.followup.send(f"Failed to start playback. It seems I lost connection to voice. Please try `/join` again and then `/play`.", ephemeral=False)
+            except Exception as e:
+                print(f"General error during voice_client.play: {e}\n{traceback.format_exc()}")
+                await interaction.followup.send(f"An unexpected error occurred while trying to play the song: {e}", ephemeral=False)
+        else:
+            await interaction.followup.send("I'm not in a voice channel or there was an issue getting connected. Please try `/join` first.", ephemeral=False)
 
 
     except yt_dlp.utils.DownloadError as e:
@@ -617,7 +631,7 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
         else:
             cooldown_message = f"Your command is on cooldown. Please try again in **{remaining_time} seconds**."
         
-        # Always try to send the cooldown message, using followup if interaction.response.is_done()
+        # Always try to send the cooldown message, using followup if interaction.response.is_done():
         if interaction.response.is_done():
             await interaction.followup.send(cooldown_message, ephemeral=True)
         else:
