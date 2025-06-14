@@ -146,9 +146,10 @@ async def on_voice_state_update(member, before, after):
     
     # If a user disconnects from the bot's channel
     if before.channel and bot.user in before.channel.members and not after.channel:
-        if len(before.channel.members) == 1: # Only the bot left in channel
+        # If the bot is the only member left in the voice channel after a user leaves, disconnect
+        if len(before.channel.members) == 1 and bot.user in before.channel.members:
             voice_client = discord.utils.get(bot.voice_clients, guild__id=before.channel.guild.id)
-            if voice_client:
+            if voice_client and voice_client.is_connected(): # Ensure it's still connected before trying to disconnect
                 await voice_client.disconnect()
                 if before.channel.guild.id in guild_music_queues:
                     del guild_music_queues[before.channel.guild.id]
@@ -317,13 +318,29 @@ async def play(interaction: discord.Interaction, query: str):
             url = info['url']
             title = info.get('title', 'Unknown Title')
 
-            if voice_client.is_playing() or (interaction.guild.id in guild_music_queues and not guild_music_queues[interaction.guild.id].empty()):
+            # --- Critical check for voice connection before attempting to play ---
+            if voice_client and not voice_client.is_connected():
+                await interaction.followup.send("I tried to play, but I'm no longer connected to the voice channel. Please try `/join` first.", ephemeral=False)
+                print(f"DEBUG: Bot not connected to voice when attempting to play in guild {interaction.guild.id} (before starting playback).")
+                return # Exit the command since we can't play if disconnected.
+
+            if voice_client and (voice_client.is_playing() or (interaction.guild.id in guild_music_queues and not guild_music_queues[interaction.guild.id].empty())):
                 await guild_music_queues[interaction.guild.id].put(url)
                 await interaction.followup.send(f"Added **{title}** to the queue!", ephemeral=False)
+            elif voice_client: # Only attempt to play if voice_client is valid and connected
+                try:
+                    player = await FFmpegOpusAudio.from_probe(url, **FFMPEG_OPTIONS)
+                    voice_client.play(player, after=lambda e: bot.loop.create_task(play_next_song(interaction.guild.id, e)))
+                    await interaction.followup.send(f"Now playing: **{title}**", ephemeral=False)
+                except discord.ClientException as ce:
+                    print(f"ClientException during voice_client.play: {ce}\n{traceback.format_exc()}")
+                    await interaction.followup.send(f"Failed to start playback. It seems I lost connection to voice. Please try `/join` again and then `/play`.", ephemeral=False)
+                except Exception as e:
+                    print(f"General error during voice_client.play: {e}\n{traceback.format_exc()}")
+                    await interaction.followup.send(f"An unexpected error occurred while trying to play the song: {e}", ephemeral=False)
             else:
-                player = await FFmpegOpusAudio.from_probe(url, **FFMPEG_OPTIONS)
-                voice_client.play(player, after=lambda e: bot.loop.create_task(play_next_song(interaction.guild.id, e)))
-                await interaction.followup.send(f"Now playing: **{title}**", ephemeral=False)
+                await interaction.followup.send("I'm not in a voice channel or there was an issue getting connected. Please try `/join` first.", ephemeral=False)
+
 
     except yt_dlp.utils.DownloadError as e:
         print(f"YTDL Download Error: {e}\n{traceback.format_exc()}")
