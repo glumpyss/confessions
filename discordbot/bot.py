@@ -14,7 +14,7 @@ load_dotenv()
 
 # --- Bot Configuration ---
 DISCORD_BOT_TOKEN = os.getenv('DISCORD_TOKEN') # Using DISCORD_TOKEN as per your environment variable name
-CONFESSIONS_CHANNEL_ID = 1383002144352894990
+CONFESSIONS_CHANNEL_ID = 1383079469958566038
 
 # --- YTDLP Options for Music Playback ---
 YTDL_OPTIONS = {
@@ -335,8 +335,16 @@ async def show_queue(interaction: discord.Interaction):
 # Apply a 10-second cooldown per user
 @app_commands.checks.cooldown(1, 10, key=lambda i: i.user.id)
 async def gag_stock(interaction: discord.Interaction):
-    # Defer the response immediately as API calls can take time
-    await interaction.response.defer(ephemeral=True)
+    # Ensure deferral happens immediately.
+    # If the interaction is somehow already responded to, this will raise NotFound.
+    # We will try to catch this at the global error handler.
+    try:
+        await interaction.response.defer(ephemeral=True)
+    except discord.errors.NotFound:
+        # If we failed to defer, it means the interaction is already invalid/expired.
+        # Log this and exit to prevent further errors for this specific interaction.
+        print("Failed to defer interaction. It might have expired or been responded to already.")
+        return # Exit the command if we can't defer.
 
     try:
         async with aiohttp.ClientSession() as session:
@@ -422,12 +430,19 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
         else:
             cooldown_message = f"Your command is on cooldown. Please try again in **{remaining_time} seconds**."
         
-        await interaction.response.send_message(cooldown_message, ephemeral=True)
+        # Always try to send the cooldown message, using followup if interaction.response.is_done()
+        if interaction.response.is_done():
+            await interaction.followup.send(cooldown_message, ephemeral=True)
+        else:
+            await interaction.response.send_message(cooldown_message, ephemeral=True)
     else:
+        # For any other unhandled errors, log them and send a generic message
         print(f"Unhandled application command error: {error}\n{traceback.format_exc()}")
         if interaction.response.is_done():
+            # If a response has already been sent (e.g., initial deferral), use followup
             await interaction.followup.send("An unexpected error occurred while processing your command. The bot developers have been notified.", ephemeral=True)
         else:
+            # Otherwise, send initial response
             await interaction.response.send_message("An unexpected error occurred while processing your command. The bot developers have been notified.", ephemeral=True)
 
 
