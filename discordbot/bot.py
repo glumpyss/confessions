@@ -507,7 +507,8 @@ async def info(interaction: discord.Interaction):
 
     embed = discord.Embed(
         title="Currently Playing Song Information",
-        color=discord.Color.blue()
+        color=discord.Color.blue(),
+        timestamp=interaction.created_at # Set timestamp directly in constructor
     )
     embed.add_field(name="Title", value=title, inline=False)
     embed.add_field(name="Artist/Uploader", value=uploader, inline=False)
@@ -516,7 +517,6 @@ async def info(interaction: discord.Interaction):
     embed.add_field(name="Source Link", value=f"[Click Here]({webpage_url})" if webpage_url != 'N/A' else 'N/A', inline=True)
     
     embed.set_footer(text=f"Requested by {interaction.user.display_name}")
-    embed.set_timestamp(interaction.created_at)
 
     await interaction.followup.send(embed=embed, ephemeral=False)
 
@@ -641,4 +641,3 @@ if __name__ == "__main__":
         print("For local development, create a .env file in the same directory as bot.py with: DISCORD_TOKEN='YOUR_ACTUAL_TOKEN_HERE'")
     else:
         bot.run(DISCORD_BOT_TOKEN)
-
