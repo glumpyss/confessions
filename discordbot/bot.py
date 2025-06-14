@@ -13,7 +13,7 @@ import aiohttp # Import aiohttp for making HTTP requests
 load_dotenv()
 
 # --- Bot Configuration ---
-DISCORD_BOT_TOKEN = os.getenv('DISCORD_TOKEN')
+DISCORD_BOT_TOKEN = os.getenv('DISCORD_TOKEN') # Using DISCORD_TOKEN as per your environment variable name
 CONFESSIONS_CHANNEL_ID = 1383079469958566038
 
 # --- YTDLP Options for Music Playback ---
@@ -344,11 +344,11 @@ async def gag_stock(interaction: discord.Interaction):
                 response.raise_for_status() # Raise an exception for bad status codes (4xx or 5xx)
                 data = await response.json()
 
-        # Extract specific stock information
-        seed_stock = data.get('seedstock', 'N/A')
-        honeyshop_stock = data.get('honeyshop', 'N/A')
-        gear_stock = data.get('gearstock', 'N/A')
-        egg_stock = data.get('eggstock', 'N/A')
+        # Corrected: Use the exact camelCase keys from the API response
+        seed_stock = data.get('seedStock', 'N/A')
+        honeyshop_stock = data.get('honeyshopStock', 'N/A') # Corrected key
+        gear_stock = data.get('gearStock', 'N/A')       # Corrected key
+        egg_stock = data.get('eggStock', 'N/A')         # Corrected key
 
         # Create a clean, modern embed with inline fields
         embed = discord.Embed(
@@ -358,9 +358,9 @@ async def gag_stock(interaction: discord.Interaction):
         )
 
         embed.add_field(name="Seed Stock", value=seed_stock, inline=True)
-        embed.add_field(name="Honey Stock", value=honeyshop_stock, inline=True)
+        embed.add_field(name="Honey Shop Stock", value=honeyshop_stock, inline=True) # Updated name for clarity
         embed.add_field(name="Gear Stock", value=gear_stock, inline=True)
-        embed.add_field(name="Egg Stock", value=egg_stock, inline=True) # Assuming eggstock is also needed
+        embed.add_field(name="Egg Stock", value=egg_stock, inline=True)
 
         await interaction.followup.send(embed=embed, ephemeral=True)
 
@@ -387,7 +387,6 @@ async def gag_stock(interaction: discord.Interaction):
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
     if isinstance(error, app_commands.CommandOnCooldown):
-        # Format cooldown time nicely (e.g., 5.0s -> 5 seconds)
         remaining_time = round(error.retry_after, 1)
         if remaining_time < 1:
             cooldown_message = "Your command is on cooldown. Please try again in less than a second."
@@ -396,13 +395,10 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
         
         await interaction.response.send_message(cooldown_message, ephemeral=True)
     else:
-        # For any other unhandled errors, log them and send a generic message
         print(f"Unhandled application command error: {error}\n{traceback.format_exc()}")
         if interaction.response.is_done():
-            # If a response has already been sent (e.g., initial deferral), use followup
             await interaction.followup.send("An unexpected error occurred while processing your command. The bot developers have been notified.", ephemeral=True)
         else:
-            # Otherwise, send initial response
             await interaction.response.send_message("An unexpected error occurred while processing your command. The bot developers have been notified.", ephemeral=True)
 
 
@@ -412,6 +408,7 @@ if __name__ == "__main__":
         print("ERROR: DISCORD_TOKEN environment variable not set.")
         print("Please set the 'DISCORD_TOKEN' environment variable.")
         print("For local development, create a .env file in the same directory as bot.py with: DISCORD_TOKEN='YOUR_ACTUAL_TOKEN_HERE'")
-        print("For deployment, set the environment variable directly on your hosting platform (e.g., Heroku, Railway).")
     else:
         bot.run(DISCORD_BOT_TOKEN)
+
+
