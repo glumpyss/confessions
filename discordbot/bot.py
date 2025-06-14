@@ -346,10 +346,9 @@ async def gag_stock(interaction: discord.Interaction):
 
         # Corrected: Use the exact camelCase keys from the API response
         seed_stock = data.get('seedStock', 'N/A')
-        honeyshop_stock = data.get('honeyshopStock', 'N/A') # Corrected key
-        gear_stock = data.get('gearStock', 'N/A')       # Corrected key
-        egg_stock = data.get('eggStock', 'N/A')         # Corrected key
-
+        egg_stock = data.get('eggStock', 'N/A')         
+        gear_stock = data.get('gearStock', 'N/A')       
+        
         # Create a clean, modern embed with inline fields
         embed = discord.Embed(
             title="Gag Stock Information",
@@ -357,10 +356,11 @@ async def gag_stock(interaction: discord.Interaction):
             timestamp=interaction.created_at # Add timestamp for modern look
         )
 
-        embed.add_field(name="Seed Stock", value=seed_stock, inline=True)
-        embed.add_field(name="Honey Shop Stock", value=honeyshop_stock, inline=True) # Updated name for clarity
-        embed.add_field(name="Gear Stock", value=gear_stock, inline=True)
-        embed.add_field(name="Egg Stock", value=egg_stock, inline=True)
+        # Add fields only for the requested stock types with the desired names
+        embed.add_field(name="Seed Name", value=seed_stock, inline=True)
+        embed.add_field(name="Egg Name", value=egg_stock, inline=True)
+        embed.add_field(name="Gear Name", value=gear_stock, inline=True)
+        # Note: 'honeyshopStock' is excluded as per the user's request
 
         await interaction.followup.send(embed=embed, ephemeral=True)
 
@@ -410,5 +410,4 @@ if __name__ == "__main__":
         print("For local development, create a .env file in the same directory as bot.py with: DISCORD_TOKEN='YOUR_ACTUAL_TOKEN_HERE'")
     else:
         bot.run(DISCORD_BOT_TOKEN)
-
 
