@@ -350,10 +350,15 @@ async def gag_stock(interaction: discord.Interaction):
         egg_items = data.get('eggStock', [])         
         gear_items = data.get('gearStock', [])       
         
+        # --- DEBUG PRINT STATEMENT ---
+        print(f"Raw seedStock from API: {seed_items}")
+        # --- END DEBUG PRINT STATEMENT ---
+
         # Format stock lists into readable strings
         def format_stock_list(items_data):
             if not isinstance(items_data, list):
                 # This should ideally not happen if data.get() provides [] as default
+                print(f"Warning: Expected a list for stock items, got {type(items_data)}")
                 return "Data format error" 
             if not items_data:
                 return "None in stock"
