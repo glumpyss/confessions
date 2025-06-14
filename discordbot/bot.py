@@ -348,12 +348,14 @@ async def gag_stock(interaction: discord.Interaction):
                 response.raise_for_status() # Raise an exception for bad status codes (4xx or 5xx)
                 data = await response.json()
 
-        seed_items = data.get('seedStock', [])
+        # --- FIX: Changed 'seedStock' to 'seedsStock' based on your API output ---
+        seeds_stock_data = data.get('seedsStock', []) # Use 'seedsStock' here
         egg_items = data.get('eggStock', [])         
         gear_items = data.get('gearStock', [])       
         
         # --- DEBUG PRINT STATEMENT for Raw Seed Stock ---
-        print(f"Raw seedStock from API: {seed_items}")
+        # This will now print what's under 'seedsStock'
+        print(f"Raw seedsStock from API: {seeds_stock_data}")
         # --- END DEBUG PRINT STATEMENT ---
 
         def format_stock_list(items_data):
@@ -377,7 +379,7 @@ async def gag_stock(interaction: discord.Interaction):
             
             return "\n".join(formatted_items)
 
-        formatted_seed_stock = format_stock_list(seed_items)
+        formatted_seeds_stock = format_stock_list(seeds_stock_data) # Use 'seeds_stock_data' here
         formatted_egg_stock = format_stock_list(egg_items)
         formatted_gear_stock = format_stock_list(gear_items)
 
@@ -387,7 +389,7 @@ async def gag_stock(interaction: discord.Interaction):
             timestamp=interaction.created_at
         )
 
-        embed.add_field(name="Seed Stock", value=formatted_seed_stock, inline=True)
+        embed.add_field(name="Seed Stock", value=formatted_seeds_stock, inline=True) # Use 'formatted_seeds_stock' here
         embed.add_field(name="Egg Stock", value=formatted_egg_stock, inline=True)
         embed.add_field(name="Gear Stock", value=formatted_gear_stock, inline=True)
 
@@ -446,4 +448,6 @@ if __name__ == "__main__":
         print("For local development, create a .env file in the same directory as bot.py with: DISCORD_TOKEN='YOUR_ACTUAL_TOKEN_HERE'")
     else:
         bot.run(DISCORD_BOT_TOKEN)
+
+
 
