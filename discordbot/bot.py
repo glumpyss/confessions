@@ -15,7 +15,7 @@ load_dotenv()
 
 # --- Bot Configuration ---
 DISCORD_BOT_TOKEN = os.getenv('DISCORD_TOKEN') # Using DISCORD_TOKEN as per your environment variable name
-CONFESSIONS_CHANNEL_ID = 1383079469958566038 # Replace with your actual confessions channel ID
+CONFESSIONS_CHANNEL_ID = 1383002144352894990 # Updated to match discord-confession-bot immersive
 
 # --- YTDLP Options for Music Playback ---
 YTDL_OPTIONS = {
@@ -76,8 +76,7 @@ async def play_next_song(guild_id, error=None):
     # Handle looping the current song
     loop_mode = guild_loop_modes.get(guild_id, None)
     if loop_mode == 'song' and guild_id in now_playing_info:
-        # If looping current song, re-add it to the front of a temporary queue or handle directly
-        # For simplicity with 'after' callback, we'll just use the already stored now_playing_info
+        # If looping current song, re-use the already stored now_playing_info
         song_to_play = now_playing_info[guild_id]
         print(f"DEBUG: Looping current song: {song_to_play.get('title')} in guild {guild_id}.")
     elif loop_mode == 'queue' and guild_id in guild_music_queues and guild_id in now_playing_info:
@@ -110,7 +109,7 @@ async def play_next_song(guild_id, error=None):
 
         try:
             next_url = song_to_play['url']
-            player = FFmpegOpusAudio.from_probe(next_url, **FFMPEG_OPTIONS)
+            player = await FFmpegOpusAudio.from_probe(next_url, **FFMPEG_OPTIONS) # Await here
             
             # Wrap player with PCMVolumeTransformer for volume control
             current_volume = guild_volumes.get(guild_id, 1.0) # Default to 100%
@@ -417,7 +416,8 @@ async def play(interaction: discord.Interaction, query: str):
             try:
                 print(f"DEBUG: Starting FFmpegOpusAudio.from_probe for '{title}'...")
                 start_time_ffmpeg = time.time()
-                player = FFmpegOpusAudio.from_probe(url, **FFMPEG_OPTIONS)
+                # Await the coroutine returned by from_probe
+                player = await FFmpegOpusAudio.from_probe(url, **FFMPEG_OPTIONS) 
                 # Wrap player with PCMVolumeTransformer for volume control
                 current_volume = guild_volumes.get(interaction.guild.id, 1.0) # Default to 100%
                 player = discord.PCMVolumeTransformer(player, volume=current_volume)
@@ -434,7 +434,7 @@ async def play(interaction: discord.Interaction, query: str):
                 await interaction.followup.send(f"Failed to start playback. It seems I lost connection to voice. Please try `/join` again and then `/play`.", ephemeral=False)
             except Exception as e:
                 print(f"General error during voice_client.play: {e}\n{traceback.format_exc()}")
-                await interaction.followup.send(f"An unexpected error occurred while trying to play the song: {e}", ephemeral=False)
+                await interaction.followup.send(f"An unexpected error occurred while trying to play the song. Ensure PyNaCl and FFmpeg are installed and accessible, and try again. Detailed error: {e}", ephemeral=False)
         else:
             await interaction.followup.send("I'm not in a voice channel or there was an issue getting connected. Please try `/join` first.", ephemeral=False)
 
@@ -540,9 +540,9 @@ async def show_queue(interaction: discord.Interaction):
     embed = discord.Embed(
         title="Music Queue",
         description=queue_description,
-        color=discord.Color.dark_grey()
+        color=discord.Color.dark_grey(),
+        timestamp=interaction.created_at # Set timestamp directly in constructor
     )
-    embed.set_timestamp(interaction.created_at)
     await interaction.followup.send(embed=embed)
 
 # --- Command: /info ---
