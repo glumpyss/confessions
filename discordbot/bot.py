@@ -101,7 +101,7 @@ DARES = [
     "Make a funny face during a Discord video call (if applicable).",
     "Write a 1-sentence synopsis of your favorite Discord bot's purpose.",
     "Ping the bot's developer in a public channel and tell them a random fact.",
-    "Change your Discord bio to "Powered by [Your Bot's Name]!" for 30 minutes.",
+    "Change your Discord bio to "Powered by Lonelyy!" for 30 minutes.",
     "Send a message that only contains Discord emoji reactions.",
     "List all the bots in the server in reverse alphabetical order.",
     "Say "Latency is love, latency is life" five times fast in a voice chat.",
