@@ -15,20 +15,24 @@ load_dotenv()
 
 # --- Bot Configuration ---
 DISCORD_BOT_TOKEN = os.getenv('DISCORD_TOKEN')
-CONFESSIONS_CHANNEL_ID = 1383002144352894990
+CONFESSIONS_CHANNEL_ID = 1383079469958566038
 
 # --- API Configuration ---
 GAG_STOCK_API_URL = "https://growagardenapi.vercel.app/api/stock/GetStock"
 
-# Placeholders for API Keys (Replace with your actual keys if you get them)
-# For /lyrics (e.g., from an unofficial API or a service like Musixmatch, Genius)
-LYRICS_API_URL = "https://api.lyrics.ovh/v1/{artist}/{title}" # Example
-# For /currencyconvert (e.g., from ExchangeRate-API or Open Exchange Rates)
-CURRENCY_API_KEY = "YOUR_CURRENCY_API_KEY" # Example: "YOUR_API_KEY"
-CURRENCY_API_URL = f"https://v6.exchangerate-api.com/v6/{CURRENCY_API_KEY}/latest/USD" # Example
-# For /imagegenerate (e.g., DALL-E, Stability AI)
-IMAGE_GEN_API_KEY = "YOUR_IMAGE_GEN_API_KEY" # Example
-IMAGE_GEN_API_URL = "https://api.example.com/image_generation" # Example
+# --- API Keys for external services ---
+# FOR CURRENCY CONVERSION: Get your API key from https://www.exchangerate-api.com/
+CURRENCY_API_KEY = os.getenv("CURRENCY_API_KEY", "3293ffb3b5d2c2b66b204e1f ") 
+CURRENCY_API_URL = f"https://v6.exchangerate-api.com/v6/{CURRENCY_API_KEY}/latest/USD" 
+
+# FOR IMAGE GENERATION: Get your API key from a service like Stability AI (https://platform.stability.ai/) or OpenAI DALL-E.
+# Replace with your chosen API's base URL and your key.
+IMAGE_GEN_API_KEY = os.getenv("IMAGE_GEN_API_KEY", "sk-4HLrpWeV4ilP9kdp5nLRQijFrp27wT5xIguxd176Mrk09ofJ") 
+# Example Stability AI (SDXL) endpoint, check their latest documentation for exact URL and payload:
+IMAGE_GEN_API_URL = "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v0-9/text-to-image" 
+
+# FOR FORTNITE STATS: Get your API key from Fortnite-API.com (https://fortnite-api.com/)
+FORTNITE_API_KEY = os.getenv("FORTNITE_API_KEY", "YOUR_FORTNITE_API_KEY")
 
 # --- Bot Setup ---
 intents = discord.Intents.default()
@@ -49,7 +53,27 @@ TRUTHS = [
     "What's a secret talent you have?",
     "What's the weirdest food combination you secretly enjoy?",
     "What's one thing you're really bad at, but love doing?",
-    "What's the funniest thing you've seen happen on Discord?"
+    "What's the funniest thing you've seen happen on Discord?",
+    "What's the most scandalous thing you've ever witnessed in a public Discord call?",
+    "What's a secret Discord server you're in that you'd never tell your real-life friends about?",
+    "What's the riskiest lie you've ever told someone you met on Discord?",
+    "Have you ever pretended to be busy in real life to spend more time on Discord? What were you doing instead?",
+    "What's the most embarrassing Discord message you've ever accidentally sent to the wrong person/channel?",
+    "What's a weird habit or ritual you have when you're heavily invested in a Discord game or event?",
+    "What's the most inappropriate direct message exchange you've ever had on Discord?",
+    "Have you ever snooped through someone else's Discord DMs or private channels (with or without permission)?",
+    "What's a Discord crush you've had that no one knows about?",
+    "What's the most time you've ever spent on Discord in a single day, and what were you avoiding in real life?",
+    "What's one thing you've done in real life that was directly influenced by a dare or challenge from Discord?",
+    "What's the most personal secret you've accidentally revealed in a Discord voice chat?",
+    "What's one Discord server you joined purely out of FOMO (Fear Of Missing Out) and then immediately regretted?",
+    "What's a Discord profile picture or bio you've had that you now deeply regret?",
+    "Have you ever blocked someone on Discord in real life, or vice versa, because of something that happened online?",
+    "What's the most outrageous lie you've ever told about yourself on a Discord profile or in a server?",
+    "What's a Discord roleplay scenario you've been in that blurred the lines between online and real life too much?",
+    "Have you ever tried to use Discord to find a romantic partner, and what was your most awkward experience?",
+    "What's the most dramatic exit you've ever made from a Discord server, and why?",
+    "What's a secret you keep from your real-life friends that you've told someone on Discord?",
 ]
 
 DARES = [
@@ -57,7 +81,68 @@ DARES = [
     "Change your nickname to 'Daredevil' for 5 minutes.",
     "Say 'Boop boop beep' in a voice chat (if applicable).",
     "Post a picture of your pet (or a funny animal picture) in chat.",
-    "Try to say your username backwards 3 times fast."
+    "Try to say your username backwards 3 times fast.",
+    "Give a random user a compliment.",
+    "Tell Summer hes a sexy young man",
+    "Send a screenshot of your phone's home screen",
+    "Tell us your go-to karaoke song.",
+    "Post a picture of your shoes.",
+    "Show us your best thinking pose",
+    "What's one thing you can't live without?",
+    "Type out your Discord ID backwards",
+    "Share the last Discord sticker you used.",
+    "Change your server profile picture to a random server emoji for 5 minutes.",
+    "Do your best impression of a Discord notification sound.",
+    "Send a message composed entirely of Discord bot command names.",
+    "Share a screenshot of your current Discord activity status.",
+    "Tell us a funny story about something that happened in a Discord call.",
+    "What's one Discord Nitro feature you can't live without?",
+    "Give a shoutout to a specific Discord server.",
+    "Make a funny face during a Discord video call (if applicable).",
+    "Write a 1-sentence synopsis of your favorite Discord bot's purpose.",
+    "Ping the bot's developer in a public channel and tell them a random fact.",
+    "Change your Discord bio to "Powered by [Your Bot's Name]!" for 30 minutes.",
+    "Send a message that only contains Discord emoji reactions.",
+    "List all the bots in the server in reverse alphabetical order.",
+    "Say "Latency is love, latency is life" five times fast in a voice chat.",
+    "Post a picture of your favorite Discord emote that isn't from this server.",
+    "Share the first message you ever sent in this server.",
+    "Send a screenshot of your Discord friend list (blurring names).",
+    "Give a random user in the server a "ping" role (if you have permission).",
+    "Invent a new Discord game mode for voice channels.",
+    "Try to draw the Discord logo using only text characters.",
+    "Describe what you'd do if Discord went down for 24 hours.",
+    "Post a little-known Discord trick or tip.",
+    "Write a mini-story (3 sentences) about a lost message in a Discord channel.",
+    "Reveal your least favorite Discord server you've been in.",
+    "Change your server nickname to a common Discord error message for 5 minutes.",
+    "Send a message using only Discord system messages (e.g., "User joined the call").",
+    "Tell us your favorite Discord custom status.",
+    "Act out the "connecting to voice" sound in voice chat.",
+    "Describe your biggest Discord pet peeve in three words.",
+    "Tell us your least favorite Discord feature.",
+    "Post a picture of your longest active Discord thread.",
+    "Recommend a Discord server you genuinely love.",
+    "Invent a new Discord permission and describe its use.",
+    "Try to say "Slash commands are super swift" with a mouthful of marshmallows (if you have them).",
+    "Write a review for an imaginary Discord bot feature.",
+    "Explain the difference between a guild and a server in Discord in 10 words or less.",
+    "Show us your best "typing..." impression.",
+    "Pretend to be a Discord moderator for your next 5 messages.",
+    "Send a picture of your favorite Discord font.",
+    "Tell us your dream Discord app command idea.",
+    "Write a short poem about Discord DMs.",
+    "What's the last Discord emoji you used? Tell us!",
+    "Do your best impression of a Discord user leaving a voice channel.",
+    "Describe your ideal Discord bot.",
+    "What's your favorite Discord Easter egg?",
+    "Send a message composed entirely of Discord invite links (to safe servers!).",
+    "Share a screenshot of your oldest Discord message in a server.",
+    "Tell us a funny story about a Discord bot going rogue.",
+    "What's one Discord developer feature you can't live without?",
+    "Give a shoutout to a specific Discord role.",
+    "Make a funny sound in a Discord voice call (if applicable).",
+    "Write a 1-sentence synopsis of why you love Discord.",
 ]
 
 NEVER_HAVE_I_EVER = [
@@ -65,11 +150,29 @@ NEVER_HAVE_I_EVER = [
     "Never have I ever fallen asleep in a public place.",
     "Never have I ever accidentally sent a text to the wrong person.",
     "Never have I ever faked being sick to get out of something.",
-    "Never have I ever cheated on a test."
+    "Never have I ever cheated on a test.",
+    "Never have I ever accidentally shared a highly embarrassing screenshot in a public Discord channel.",
+    "Never have I ever ghosted someone in real life because I was too invested in a Discord roleplay.",
+    "Never have I ever pretended to be someone else entirely during a Discord voice chat.",
+    "Never have I ever gone on a date with someone I only knew from Discord, and it was nothing like I expected.",
+    "Never have I ever been caught discussing something highly inappropriate in a Discord DM by someone looking over my shoulder.",
+    "Never have I ever used a voice changer in Discord to prank someone and taken it too far.",
+    "Never have I ever been secretly attracted to a Discord moderator or admin.",
+    "Never have I ever joined a "not safe for work" Discord server just out of pure curiosity.",
+    "Never have I ever stayed up all night on Discord and then had to pretend I got sleep in real life.",
+    "Never have I ever sent a risky photo or video to someone I only knew from Discord.",
+    "Never have I ever created a fake Discord account to snoop on someone.",
+    "Never have I ever been involved in or witnessed serious drama unfold in a Discord voice channel.",
+    "Never have I ever regretted a Discord username or profile picture so much that I considered quitting.",
+    "Never have I ever had a dream about my Discord friends or a specific server.",
 ]
 
 # --- Check if user is bot-banned ---
 async def is_bot_banned(interaction: discord.Interaction):
+    """
+    Checks if a user is banned from using bot commands.
+    Sends an ephemeral message if banned.
+    """
     if interaction.user.id in bot_banned_users:
         await interaction.response.send_message("You are banned from using bot commands.", ephemeral=True)
         return True
@@ -85,6 +188,8 @@ async def on_ready():
     print(f'Logged in as {bot.user.name} ({bot.user.id})')
     print('------')
     try:
+        # Sync slash commands with Discord.
+        # This can take a few seconds and might not be instant.
         synced = await bot.tree.sync()
         print(f"Synced {len(synced)} command(s).")
     except Exception as e:
@@ -96,6 +201,10 @@ async def on_ready():
     text="The confession you want to submit anonymously."
 )
 async def confession(interaction: discord.Interaction, text: str):
+    """
+    Handles the '/confession' slash command.
+    Submits an anonymous confession to a predefined channel.
+    """
     if await is_bot_banned(interaction): return
     
     await interaction.response.send_message(
@@ -127,6 +236,9 @@ async def confession(interaction: discord.Interaction, text: str):
 @bot.tree.command(name="gag-stock", description="Get the current stock levels for various gags.")
 @app_commands.checks.cooldown(1, 10, key=lambda i: i.user.id)
 async def gag_stock(interaction: discord.Interaction):
+    """
+    Fetches and displays current stock levels from the Grow A Garden API.
+    """
     if await is_bot_banned(interaction): return
     
     try:
@@ -138,7 +250,7 @@ async def gag_stock(interaction: discord.Interaction):
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(GAG_STOCK_API_URL) as response:
-                response.raise_for_status()
+                response.raise_for_status() # Raises an exception for HTTP errors (4xx or 5xx)
                 data = await response.json()
 
         seeds_stock_data = data.get('seedsStock', [])
@@ -148,6 +260,7 @@ async def gag_stock(interaction: discord.Interaction):
         print(f"Raw seedsStock from API: {seeds_stock_data}")
 
         def format_stock_list(items_data):
+            """Helper to format stock items into a readable string."""
             if not isinstance(items_data, list):
                 print(f"Warning: Expected a list for stock items, got {type(items_data)}")
                 return "Data format error" 
@@ -206,6 +319,9 @@ async def gag_stock(interaction: discord.Interaction):
 # --- New Command: /uptime ---
 @bot.tree.command(name="uptime", description="Shows how long the bot has been online.")
 async def uptime(interaction: discord.Interaction):
+    """
+    Displays the bot's current uptime.
+    """
     if await is_bot_banned(interaction): return
 
     current_time = datetime.now()
@@ -223,7 +339,7 @@ async def uptime(interaction: discord.Interaction):
     if minutes > 0:
         uptime_string.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
     if seconds > 0 or not uptime_string: # Include seconds if no other unit, or if it's less than a minute
-        uptime_string.append(f"{seconds} second{'s' if seconds != 1 else ''}")
+        uptime_string.append(f"{int(seconds)} second{'s' if seconds != 1 else ''}") # Cast to int for display
     
     await interaction.response.send_message(f"I've been online for **{' '.join(uptime_string)}**.", ephemeral=False)
 
@@ -232,9 +348,11 @@ async def uptime(interaction: discord.Interaction):
 @bot.tree.command(name="ship", description="Calculate the compatibility between two users.")
 @app_commands.describe(user1="The first user.", user2="The second user.")
 async def ship(interaction: discord.Interaction, user1: discord.Member, user2: discord.Member):
+    """
+    Calculates and displays a "compatibility percentage" between two users.
+    """
     if await is_bot_banned(interaction): return
 
-    # Ensure users are different
     if user1.id == user2.id:
         return await interaction.response.send_message("Please pick two different users!", ephemeral=True)
 
@@ -271,9 +389,12 @@ async def ship(interaction: discord.Interaction, user1: discord.Member, user2: d
     )
 
 # --- New Command: /simprate ---
-@bot.tree.command(name="simprate", description="Rate someone's 'simp' level.")
+@bot.tree.command(name="simprate", description="Rate someone's 'simp' level (for playful use).")
 @app_commands.describe(user="The user to rate.")
 async def simprate(interaction: discord.Interaction, user: discord.Member):
+    """
+    Playfully rates a user's 'simp' level.
+    """
     if await is_bot_banned(interaction): return
 
     # Use user ID as a seed for consistent results for the same user
@@ -296,6 +417,9 @@ async def simprate(interaction: discord.Interaction, user: discord.Member):
 @bot.tree.command(name="howgay", description="Playfully rate someone's 'gayness'.")
 @app_commands.describe(user="The user to rate.")
 async def howgay(interaction: discord.Interaction, user: discord.Member):
+    """
+    Playfully rates a user's 'gayness'.
+    """
     if await is_bot_banned(interaction): return
 
     random.seed(user.id)
@@ -327,27 +451,39 @@ async def howgay(interaction: discord.Interaction, user: discord.Member):
 # --- New Command: /truth ---
 @bot.tree.command(name="truth", description="Get a random truth question.")
 async def truth(interaction: discord.Interaction):
+    """
+    Sends a random 'truth' question.
+    """
     if await is_bot_banned(interaction): return
     await interaction.response.send_message(f"**Truth:** {random.choice(TRUTHS)}", ephemeral=False)
 
 # --- New Command: /dare ---
 @bot.tree.command(name="dare", description="Get a random dare challenge.")
 async def dare(interaction: discord.Interaction):
+    """
+    Sends a random 'dare' challenge.
+    """
     if await is_bot_banned(interaction): return
     await interaction.response.send_message(f"**Dare:** {random.choice(DARES)}", ephemeral=False)
 
 # --- New Command: /neverhaveiever ---
 @bot.tree.command(name="neverhaveiever", description="Play a 'Never Have I Ever' statement.")
 async def neverhaveiever(interaction: discord.Interaction):
+    """
+    Sends a random 'Never Have I Ever' statement.
+    """
     if await is_bot_banned(interaction): return
     await interaction.response.send_message(f"**Never Have I Ever:** {random.choice(NEVER_HAVE_I_EVER)}", ephemeral=False)
 
 # --- New Command: /clickgame ---
 @bot.tree.command(name="clickgame", description="A simple click-based mini-game.")
 async def clickgame(interaction: discord.Interaction):
+    """
+    Starts a simple mini-game where the user clicks a button.
+    """
     if await is_bot_banned(interaction): return
     
-    view = discord.ui.View()
+    view = discord.ui.View(timeout=30) # Set a timeout for the view (e.g., 30 seconds)
     button = discord.ui.Button(label="Click Me!", style=discord.ButtonStyle.primary)
 
     async def button_callback(button_interaction: discord.Interaction):
@@ -361,20 +497,20 @@ async def clickgame(interaction: discord.Interaction):
     view.add_item(button)
 
     await interaction.response.send_message("Test your reflexes! Click the button!", view=view, ephemeral=False)
-    # The view will timeout after 180 seconds if no interaction occurs.
+    # The view will timeout after 180 seconds by default if no interaction occurs.
 
 # --- New Command: /lyrics ---
 @bot.tree.command(name="lyrics", description="Get lyrics for a song.")
 @app_commands.describe(artist="The artist's name.", title="The song title.")
 async def lyrics(interaction: discord.Interaction, artist: str, title: str):
+    """
+    Fetches and displays lyrics for a given song and artist using Lyrics.ovh API.
+    """
     if await is_bot_banned(interaction): return
 
     await interaction.response.defer(ephemeral=False)
     
-    # Placeholder for actual lyrics API integration
-    # You would replace this with a real API call (e.g., to Lyrics.ovh, Genius, Musixmatch)
     try:
-        # Example using Lyrics.ovh (rate-limited, might not always work)
         lyrics_url = f"https://api.lyrics.ovh/v1/{artist}/{title}"
         async with aiohttp.ClientSession() as session:
             async with session.get(lyrics_url) as response:
@@ -384,7 +520,7 @@ async def lyrics(interaction: discord.Interaction, artist: str, title: str):
                     if lyrics_text:
                         # Discord embed description has a limit of 4096 characters
                         if len(lyrics_text) > 4000:
-                            lyrics_text = lyrics_text[:4000] + "\n... (lyrics too long, truncated)"
+                            lyrics_text = lyrics_text[:4000] + "\n\n... (lyrics too long, truncated)"
 
                         embed = discord.Embed(
                             title=f"Lyrics for {title} by {artist}",
@@ -393,7 +529,7 @@ async def lyrics(interaction: discord.Interaction, artist: str, title: str):
                         )
                         await interaction.followup.send(embed=embed, ephemeral=False)
                     else:
-                        await interaction.followup.send(f"Couldn't find lyrics for **{title}** by **{artist}**.", ephemeral=False)
+                        await interaction.followup.send(f"Couldn't find lyrics for **{title}** by **{artist}**. No lyrics data available.", ephemeral=False)
                 elif response.status == 404:
                     await interaction.followup.send(f"Lyrics not found for **{title}** by **{artist}**. Please check the spelling.", ephemeral=False)
                 else:
@@ -407,6 +543,9 @@ async def lyrics(interaction: discord.Interaction, artist: str, title: str):
 @bot.tree.command(name="currencyconvert", description="Convert currencies.")
 @app_commands.describe(amount="The amount to convert.", from_currency="The currency code to convert from (e.g., USD, EUR).", to_currency="The currency code to convert to (e.g., JPY, GBP).")
 async def currencyconvert(interaction: discord.Interaction, amount: float, from_currency: str, to_currency: str):
+    """
+    Converts a given amount from one currency to another using an external API.
+    """
     if await is_bot_banned(interaction): return
 
     await interaction.response.defer(ephemeral=False)
@@ -415,15 +554,15 @@ async def currencyconvert(interaction: discord.Interaction, amount: float, from_
         return await interaction.followup.send("Currency conversion API key is not configured. Please contact the bot owner.", ephemeral=True)
 
     try:
-        # Ensure currency codes are uppercase for API consistency
         from_currency = from_currency.upper()
         to_currency = to_currency.upper()
 
+        # The API URL uses the from_currency as the base for rates
         api_url = f"https://v6.exchangerate-api.com/v6/{CURRENCY_API_KEY}/latest/{from_currency}"
         
         async with aiohttp.ClientSession() as session:
             async with session.get(api_url) as response:
-                response.raise_for_status() # Raise an exception for HTTP errors
+                response.raise_for_status()
                 data = await response.json()
                 
                 if data.get('result') == 'success':
@@ -436,13 +575,13 @@ async def currencyconvert(interaction: discord.Interaction, amount: float, from_
                             ephemeral=False
                         )
                     else:
-                        await interaction.followup.send(f"Could not find exchange rate for {to_currency}. Please check the currency codes.", ephemeral=False)
+                        await interaction.followup.send(f"Could not find exchange rate for `{to_currency}`. Please check the currency codes (e.g., USD, EUR).", ephemeral=False)
                 else:
                     error_type = data.get('error-type', 'Unknown error')
                     await interaction.followup.send(f"Currency conversion failed: {error_type}. Please check your currency codes and API key.", ephemeral=False)
     except aiohttp.ClientError as e:
         print(f"API request failed for currency conversion: {e}\n{traceback.format_exc()}")
-        await interaction.followup.send("Failed to retrieve currency rates. The API might be down or unreachable.", ephemeral=False)
+        await interaction.followup.send("Failed to retrieve currency rates. The API might be down or unreachable or your API key is invalid.", ephemeral=False)
     except Exception as e:
         print(f"An unexpected error occurred in /currencyconvert: {e}\n{traceback.format_exc()}")
         await interaction.followup.send("An unexpected error occurred during currency conversion.", ephemeral=False)
@@ -451,6 +590,9 @@ async def currencyconvert(interaction: discord.Interaction, amount: float, from_
 @bot.tree.command(name="imagegenerate", description="Generate an image based on a text prompt.")
 @app_commands.describe(prompt="The text description for the image to generate.")
 async def imagegenerate(interaction: discord.Interaction, prompt: str):
+    """
+    Generates an image from a text prompt using an external AI image generation API.
+    """
     if await is_bot_banned(interaction): return
 
     await interaction.response.defer(ephemeral=False)
@@ -459,18 +601,39 @@ async def imagegenerate(interaction: discord.Interaction, prompt: str):
         return await interaction.followup.send("Image generation API is not configured. Please contact the bot owner.", ephemeral=True)
 
     try:
-        # Placeholder for actual image generation API call
-        # This assumes an API that returns a direct image URL or base64 data
-        headers = {"Authorization": f"Bearer {IMAGE_GEN_API_KEY}", "Content-Type": "application/json"}
-        payload = {"prompt": prompt, "size": "512x512"} # Example payload
+        # Headers and payload need to match your chosen Image Generation API's documentation
+        headers = {
+            "Authorization": f"Bearer {IMAGE_GEN_API_KEY}",
+            "Content-Type": "application/json",
+            "Accept": "application/json" # Typically application/json for response, or image/png/jpeg for direct image
+        }
+        
+        # Example payload for Stability AI's SDXL (check docs for exact parameters)
+        payload = {
+            "text_prompts": [{"text": prompt}],
+            "cfg_scale": 7, # Controls how much the prompt is adhered to
+            "height": 512,  # Image height
+            "width": 512,   # Image width
+            "samples": 1,   # Number of images to generate (keep to 1 for free tier/simplicity)
+            "steps": 30,    # Number of steps for generation
+        }
 
         async with aiohttp.ClientSession() as session:
             async with session.post(IMAGE_GEN_API_URL, json=payload, headers=headers) as response:
-                response.raise_for_status()
+                response.raise_for_status() # Raise exception for bad responses
                 data = await response.json()
                 
-                # Assuming the API returns a direct image URL
-                image_url = data.get('url') or data.get('data', [{}])[0].get('url') # Common formats
+                # --- IMPORTANT: Parsing the response depends on your chosen API ---
+                # Example for Stability AI, which often returns base64 encoded images:
+                image_url = None
+                if data and 'artifacts' in data and len(data['artifacts']) > 0:
+                    # Check if the image is base64 encoded
+                    if 'base64' in data['artifacts'][0]:
+                        image_data_base64 = data['artifacts'][0]['base64']
+                        image_url = f"data:image/png;base64,{image_data_base64}"
+                    # Or if a direct URL is provided by the API (less common for direct generation)
+                    elif 'url' in data['artifacts'][0]:
+                        image_url = data['artifacts'][0]['url']
 
                 if image_url:
                     embed = discord.Embed(
@@ -483,19 +646,23 @@ async def imagegenerate(interaction: discord.Interaction, prompt: str):
                     embed.set_footer(text="Generated by AI")
                     await interaction.followup.send(embed=embed, ephemeral=False)
                 else:
-                    await interaction.followup.send("Could not generate image. The API response was unexpected.", ephemeral=False)
+                    await interaction.followup.send("Could not generate image. The AI response was unexpected or empty.", ephemeral=False)
 
     except aiohttp.ClientError as e:
         print(f"Image generation API request failed: {e}\n{traceback.format_exc()}")
-        await interaction.followup.send("Failed to generate image. The AI service might be down or unreachable.", ephemeral=False)
+        await interaction.followup.send(f"Failed to generate image. The AI service might be down, unreachable, or your API key is invalid. Error: `{e}`", ephemeral=False)
     except Exception as e:
         print(f"An unexpected error occurred in /imagegenerate: {e}\n{traceback.format_exc()}")
-        await interaction.followup.send("An unexpected error occurred during image generation.", ephemeral=False)
+        await interaction.followup.send("An unexpected error occurred during image generation. Please ensure your prompt is appropriate.", ephemeral=False)
+
 
 # --- New Command: /socials ---
 @bot.tree.command(name="socials", description="Add your social media links to your profile.")
-@app_commands.describe(platform="The social media platform (e.g., Twitter, Instagram).", link="Your profile link on that platform.")
+@app_commands.describe(platform="The social media platform (e.g., YouTube, Reddit).", link="Your profile link on that platform.")
 async def socials(interaction: discord.Interaction, platform: str, link: str):
+    """
+    Allows users to save their social media links. (Data is in-memory)
+    """
     if await is_bot_banned(interaction): return
 
     user_id = interaction.user.id
@@ -505,12 +672,15 @@ async def socials(interaction: discord.Interaction, platform: str, link: str):
     # Store platform in lowercase for consistency
     user_social_links[user_id][platform.lower()] = link
     
-    await interaction.response.send_message(f"Your **{platform}** link has been saved!", ephemeral=True)
+    await interaction.response.send_message(f"Your **{platform.capitalize()}** link has been saved!", ephemeral=True)
 
 # --- New Command: /getsocials ---
 @bot.tree.command(name="getsocials", description="View a user's linked social media.")
 @app_commands.describe(user="The user whose social links you want to view.")
 async def getsocials(interaction: discord.Interaction, user: discord.Member):
+    """
+    Displays a user's saved social media links.
+    """
     if await is_bot_banned(interaction): return
 
     user_id = user.id
@@ -537,10 +707,14 @@ async def getsocials(interaction: discord.Interaction, user: discord.Member):
 @app_commands.checks.has_permissions(ban_members=True) # Requires Ban Members permission
 @app_commands.describe(user="The user to ban from bot commands.", reason="The reason for the bot ban.")
 async def botban(interaction: discord.Interaction, user: discord.Member, reason: str = "No reason provided."):
+    """
+    Bans a user from using any bot commands. Requires 'Ban Members' permission.
+    """
     if user.id == bot.user.id:
         return await interaction.response.send_message("I cannot ban myself from using commands.", ephemeral=True)
     if user.id == interaction.user.id:
         return await interaction.response.send_message("You cannot ban yourself from using commands.", ephemeral=True)
+    # Prevent non-admin from banning admin, unless they are also admin
     if user.guild_permissions.administrator and not interaction.user.guild_permissions.administrator:
         return await interaction.response.send_message("You cannot ban an administrator from using bot commands unless you are also an administrator.", ephemeral=True)
 
@@ -560,6 +734,9 @@ async def botban(interaction: discord.Interaction, user: discord.Member, reason:
 @app_commands.checks.has_permissions(ban_members=True) # Requires Ban Members permission
 @app_commands.describe(user="The user to unban from bot commands.")
 async def botunban(interaction: discord.Interaction, user: discord.Member):
+    """
+    Unbans a user, allowing them to use bot commands again. Requires 'Ban Members' permission.
+    """
     if user.id not in bot_banned_users:
         return await interaction.response.send_message(f"**{user.display_name}** is not currently banned from using bot commands.", ephemeral=True)
 
@@ -571,59 +748,181 @@ async def botunban(interaction: discord.Interaction, user: discord.Member):
         print(f"Could not DM {user.display_name} about bot unban.")
 
 
-# --- Social Profile Placeholders (Requires external APIs, many are difficult to access) ---
-
-async def fetch_social_profile(platform: str, username: str, interaction: discord.Interaction):
-    """Placeholder for fetching social media profiles."""
-    await interaction.response.defer(ephemeral=False)
-    
-    # In a real bot, you'd integrate with APIs like:
-    # - Instagram: Very difficult for public bots due to strict API access.
-    # - Twitter: Requires Developer Account and API keys, subject to rate limits.
-    # - Roblox: Has public APIs for user info.
-    # - Fortnite: Has various third-party APIs for stats.
-
-    embed = discord.Embed(
-        title=f"{platform.capitalize()} Profile: {username}",
-        description="This command requires integration with external APIs.\n"
-                    "Many social media platforms have strict API access rules (e.g., Instagram, Twitter).\n"
-                    "For gaming platforms like Roblox/Fortnite, you might find third-party APIs.",
-        color=discord.Color.orange(),
-        timestamp=interaction.created_at
-    )
-    embed.add_field(name="Status", value="API Integration Pending", inline=False)
-    embed.set_footer(text="Contact the bot owner to set up API keys.")
-
-    await interaction.followup.send(embed=embed, ephemeral=False)
-
-@bot.tree.command(name="instagram", description="Shows an Instagram profile/stats (API integration needed).")
-@app_commands.describe(username="The Instagram username.")
-async def instagram(interaction: discord.Interaction, username: str):
-    if await is_bot_banned(interaction): return
-    await fetch_social_profile("Instagram", username, interaction)
-
-@bot.tree.command(name="twitter", description="Shows a Twitter profile/stats (API integration needed).")
-@app_commands.describe(username="The Twitter username.")
-async def twitter(interaction: discord.Interaction, username: str):
-    if await is_bot_banned(interaction): return
-    await fetch_social_profile("Twitter", username, interaction)
-
-@bot.tree.command(name="roblox", description="Shows a Roblox profile/stats (API integration needed).")
+# --- New Command: /roblox ---
+@bot.tree.command(name="roblox", description="Shows a Roblox user's profile and stats.")
 @app_commands.describe(username="The Roblox username.")
 async def roblox(interaction: discord.Interaction, username: str):
+    """
+    Fetches and displays a Roblox user's profile information.
+    Performs two API calls: username-to-ID, then ID-to-profile.
+    """
     if await is_bot_banned(interaction): return
-    await fetch_social_profile("Roblox", username, interaction)
+    await interaction.response.defer(ephemeral=False)
 
-@bot.tree.command(name="fortnite", description="Shows Fortnite stats (API integration needed).")
-@app_commands.describe(username="The Fortnite username.")
+    try:
+        # Step 1: Get UserID from username (POST request)
+        username_to_id_url = "https://users.roblox.com/v1/usernames/users"
+        payload = {"usernames": [username], "excludeBannedUsers": False}
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(username_to_id_url, json=payload) as response:
+                response.raise_for_status()
+                user_id_data = await response.json()
+                
+                if not user_id_data or not user_id_data.get('data'):
+                    return await interaction.followup.send(f"Could not find Roblox user **{username}**. Please check the spelling.", ephemeral=False)
+                
+                roblox_user_id = user_id_data['data'][0]['id']
+                roblox_display_name = user_id_data['data'][0].get('displayName', username)
+
+
+            # Step 2: Get User Profile Details using UserID (GET request)
+            profile_url = f"https://users.roblox.com/v1/users/{roblox_user_id}"
+            async with session.get(profile_url) as response:
+                response.raise_for_status()
+                profile_data = await response.json()
+
+                # Extract relevant data
+                name = profile_data.get('name', 'N/A')
+                display_name = profile_data.get('displayName', name)
+                description = profile_data.get('description', 'No description set.').strip()
+                created_date_str = profile_data.get('created', 'N/A')
+                is_banned = profile_data.get('isBanned', False)
+
+                # Format join date
+                join_date = "N/A"
+                if created_date_str != 'N/A':
+                    try:
+                        # Parse ISO format (e.g., '2020-01-01T00:00:00.000Z')
+                        created_dt = datetime.fromisoformat(created_date_str.replace('Z', '+00:00'))
+                        join_date = created_dt.strftime("%Y-%m-%d %H:%M UTC")
+                    except ValueError:
+                        pass # Keep N/A if parsing fails
+                
+                embed = discord.Embed(
+                    title=f"Roblox Profile: {display_name}",
+                    description=f"Username: `{name}`",
+                    color=discord.Color.blue(),
+                    timestamp=interaction.created_at
+                )
+                embed.set_thumbnail(url=f"https://www.roblox.com/Thumbs/Avatar.ashx?x=150&y=150&username={name}") # Basic avatar thumbnail
+                
+                embed.add_field(name="User ID", value=roblox_user_id, inline=True)
+                embed.add_field(name="Join Date", value=join_date, inline=True)
+                embed.add_field(name="Banned", value="Yes" if is_banned else "No", inline=True)
+                
+                if description:
+                    embed.add_field(name="About Me", value=description if len(description) <= 1024 else description[:1021] + "...", inline=False) # Discord field value limit
+
+                await interaction.followup.send(embed=embed, ephemeral=False)
+
+    except aiohttp.ClientResponseError as e:
+        if e.status == 404:
+            await interaction.followup.send(f"Roblox user **{username}** not found. Please check the spelling.", ephemeral=False)
+        else:
+            print(f"Roblox API error (status {e.status}): {e}\n{traceback.format_exc()}")
+            await interaction.followup.send(f"An error occurred while fetching Roblox profile: HTTP Status {e.status}.", ephemeral=False)
+    except aiohttp.ClientError as e:
+        print(f"Roblox API request failed: {e}\n{traceback.format_exc()}")
+        await interaction.followup.send("Failed to connect to Roblox API. It might be down or unreachable.", ephemeral=False)
+    except Exception as e:
+        print(f"An unexpected error occurred in /roblox: {e}\n{traceback.format_exc()}")
+        await interaction.followup.send("An unexpected error occurred while fetching Roblox profile.", ephemeral=False)
+
+
+# --- New Command: /fortnite ---
+@bot.tree.command(name="fortnite", description="Shows Fortnite stats for a given username.")
+@app_commands.describe(username="The Fortnite username (Epic Games Display Name).")
 async def fortnite(interaction: discord.Interaction, username: str):
+    """
+    Fetches and displays Fortnite Battle Royale player statistics using Fortnite-API.com.
+    """
     if await is_bot_banned(interaction): return
-    await fetch_social_profile("Fortnite", username, interaction)
+    await interaction.response.defer(ephemeral=False)
+
+    if not FORTNITE_API_KEY or FORTNITE_API_KEY == "YOUR_FORTNITE_API_KEY":
+        return await interaction.followup.send("Fortnite Command isnt made yet, please wait.", ephemeral=True)
+
+    try:
+        api_url = f"https://fortnite-api.com/v2/stats/br/v2?name={username}"
+        headers = {"Authorization": FORTNITE_API_KEY}
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(api_url, headers=headers) as response:
+                response.raise_for_status()
+                data = await response.json()
+
+                if data.get('status') == 200 and data.get('data'):
+                    player_data = data['data']
+                    
+                    # Extract general stats
+                    account_name = player_data['account']['name']
+                    account_level = player_data['account']['level']
+                    battle_pass_level = player_data['battlePass']['level']
+                    
+                    # Extract overall stats (for all game modes combined)
+                    overall_stats = player_data['stats']['all']['overall']
+                    wins = overall_stats.get('wins', 0)
+                    kills = overall_stats.get('kills', 0)
+                    kd = overall_stats.get('kd', 0.0)
+                    matches = overall_stats.get('matches', 0)
+                    win_rate = overall_stats.get('winRate', 0.0)
+
+                    # Extract image for player icon (if available)
+                    avatar_icon = player_data.get('image') # Fortnite-API might provide a generated image
+
+                    embed = discord.Embed(
+                        title=f"Fortnite Stats for {account_name}",
+                        color=discord.Color.dark_green(),
+                        timestamp=interaction.created_at
+                    )
+                    
+                    if avatar_icon:
+                        embed.set_thumbnail(url=avatar_icon)
+
+                    embed.add_field(name="Account Level", value=account_level, inline=True)
+                    embed.add_field(name="Battle Pass Level", value=battle_pass_level, inline=True)
+                    embed.add_field(name="Total Matches", value=matches, inline=True)
+                    
+                    embed.add_field(name="Wins", value=wins, inline=True)
+                    embed.add_field(name="Kills", value=kills, inline=True)
+                    embed.add_field(name="K/D", value=f"{kd:.2f}", inline=True)
+                    embed.add_field(name="Win Rate", value=f"{win_rate:.2f}%", inline=True)
+
+                    embed.set_footer(text="Data from Fortnite-API.com")
+                    await interaction.followup.send(embed=embed, ephemeral=False)
+
+                elif data.get('status') == 404:
+                    await interaction.followup.send(f"Fortnite player **{username}** not found. Please ensure it's an exact Epic Games Display Name.", ephemeral=False)
+                else:
+                    error_message = data.get('error', 'Unknown API error.')
+                    await interaction.followup.send(f"An error occurred while fetching Fortnite stats: {error_message}", ephemeral=False)
+
+    except aiohttp.ClientResponseError as e:
+        if e.status == 400: # Bad Request, often due to invalid username format or missing API key
+            await interaction.followup.send(f"Invalid request for Fortnite stats (HTTP 400). Please check the username and ensure your API key is correctly configured.", ephemeral=False)
+        elif e.status == 403: # Forbidden, often due to invalid API key
+            await interaction.followup.send(f"Access to Fortnite API forbidden (HTTP 403). Please check if your Fortnite-API.com key is valid.", ephemeral=False)
+        elif e.status == 404: # Not found, specifically handled above
+            await interaction.followup.send(f"Fortnite player **{username}** not found (HTTP 404).", ephemeral=False)
+        else:
+            print(f"Fortnite API error (status {e.status}): {e}\n{traceback.format_exc()}")
+            await interaction.followup.send(f"An error occurred while fetching Fortnite stats: HTTP Status {e.status}.", ephemeral=False)
+    except aiohttp.ClientError as e:
+        print(f"Fortnite API request failed: {e}\n{traceback.format_exc()}")
+        await interaction.followup.send("Failed to connect to Fortnite API. It might be down or unreachable.", ephemeral=False)
+    except Exception as e:
+        print(f"An unexpected error occurred in /fortnite: {e}\n{traceback.format_exc()}")
+        await interaction.followup.send("An unexpected error occurred while fetching Fortnite stats.", ephemeral=False)
 
 
 # --- Cooldown Error Handling for all commands ---
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    """
+    Global error handler for application commands.
+    Handles cooldowns and missing permissions specifically.
+    """
     if isinstance(error, app_commands.CommandOnCooldown):
         remaining_time = round(error.retry_after, 1)
         if remaining_time < 1:
