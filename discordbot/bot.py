@@ -105,8 +105,8 @@ async def play_next_song(guild_id, error=None):
 
         try:
             next_url = song_to_play['url']
-            # Use FFmpegPCMAudio for compatibility with PCMVolumeTransformer
-            player = await FFmpegPCMAudio.from_probe(next_url, **FFMPEG_OPTIONS) 
+            # Directly instantiate FFmpegPCMAudio with the URL
+            player = FFmpegPCMAudio(next_url, **FFMPEG_OPTIONS) 
             
             # Wrap player with PCMVolumeTransformer for volume control
             current_volume = guild_volumes.get(guild_id, 1.0) # Default to 100%
@@ -411,16 +411,17 @@ async def play(interaction: discord.Interaction, query: str):
             await interaction.followup.send(f"Added **{title}** to the queue!", ephemeral=False)
         elif voice_client: # Only attempt to play if voice_client is valid and connected
             try:
-                print(f"DEBUG: Starting FFmpegPCMAudio.from_probe for '{title}'...")
+                print(f"DEBUG: Starting FFmpegPCMAudio for '{title}'...")
                 start_time_ffmpeg = time.time()
-                # Use FFmpegPCMAudio for compatibility with PCMVolumeTransformer
-                player = await FFmpegPCMAudio.from_probe(url, **FFMPEG_OPTIONS) 
+                # Directly instantiate FFmpegPCMAudio with the URL
+                player = FFmpegPCMAudio(url, **FFMPEG_OPTIONS) 
+                
                 # Wrap player with PCMVolumeTransformer for volume control
                 current_volume = guild_volumes.get(interaction.guild.id, 1.0) # Default to 100%
                 player = discord.PCMVolumeTransformer(player, volume=current_volume)
 
                 end_time_ffmpeg = time.time()
-                print(f"DEBUG: FFmpegPCMAudio.from_probe finished in {end_time_ffmpeg - start_time_ffmpeg:.2f} seconds.")
+                print(f"DEBUG: FFmpegPCMAudio instantiation finished in {end_time_ffmpeg - start_time_ffmpeg:.2f} seconds.")
 
                 voice_client.play(player, after=lambda e: bot.loop.create_task(play_next_song(interaction.guild.id, e)))
                 now_playing_info[interaction.guild.id] = song_data # Store current playing song info
