@@ -2,10 +2,6 @@
 
 # Define the setup phase where system packages are installed
 [phases.setup]
-# Use apt to install:
-# - build-essential: Essential compilers and build tools for Python packages with C extensions (like PyNaCl).
-# - ffmpeg: For audio processing.
-# - libsodium-dev: Development headers for libsodium, which PyNaCl depends on.
-# - libopus0: The actual Opus runtime library, essential for Discord voice.
-# - python3-dev: Python development headers, often needed for compiling Python extensions.
-aptPkgs = ["build-essential", "ffmpeg", "libsodium-dev", "libopus0", "python3-dev"]
+# Only essential build tools needed for Python packages (if any have C extensions)
+# No longer need ffmpeg, libsodium-dev, libopus0, python3-dev as music system is removed.
+aptPkgs = ["build-essential"]
