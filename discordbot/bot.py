@@ -101,10 +101,10 @@ DARES = [
     "Make a funny face during a Discord video call (if applicable).",
     "Write a 1-sentence synopsis of your favorite Discord bot's purpose.",
     "Ping the bot's developer in a public channel and tell them a random fact.",
-    "Change your Discord bio to Powered by Lonelyy! for 30 minutes.", # Fixed quotes
+    "Change your Discord bio to \"Powered by Lonelyy!\" for 30 minutes.", # Fixed string literal
     "Send a message that only contains Discord emoji reactions.",
     "List all the bots in the server in reverse alphabetical order.",
-    "Say \"Latency is love, latency is life\" five times fast in a voice chat.", # Fixed quotes
+    "Say \"Latency is love, latency is life\" five times fast in a voice chat.", # Fixed string literal
     "Post a picture of your favorite Discord emote that isn't from this server.",
     "Share the first message you ever sent in this server.",
     "Send a screenshot of your Discord friend list (blurring names).",
@@ -118,13 +118,13 @@ DARES = [
     "Change your server nickname to a common Discord error message for 5 minutes.",
     "Send a message using only Discord system messages (e.g., \"User joined the call\").",
     "Tell us your favorite Discord custom status.",
-    "Act out the connecting to voice sound in voice chat.", # Consider making this more descriptive
+    "Act out the \"connecting to voice\" sound in voice chat.", # Fixed string literal and made more specific
     "Describe your biggest Discord pet peeve in three words.",
     "Tell us your least favorite Discord feature.",
     "Post a picture of your longest active Discord thread.",
     "Recommend a Discord server you genuinely love.",
     "Invent a new Discord permission and describe its use.",
-    "Try to say \"Slash commands are super swift\" with a mouthful of marshmallows (if you have them).", # Fixed quotes
+    "Try to say \"Slash commands are super swift\" with a mouthful of marshmallows (if you have them).", # Fixed string literal
     "Write a review for an imaginary Discord bot feature.",
     "Explain the difference between a guild and a server in Discord in 10 words or less.",
     "Show us your best typing... impression.",
@@ -158,7 +158,7 @@ NEVER_HAVE_I_EVER = [
     "Never have I ever been caught discussing something highly inappropriate in a Discord DM by someone looking over my shoulder.",
     "Never have I ever used a voice changer in Discord to prank someone and taken it too far.",
     "Never have I ever been secretly attracted to a Discord moderator or admin.",
-    "Never have I ever joined a not safe for work Discord server just out of pure curiosity.",
+    "Never have I ever joined a \"not safe for work\" Discord server just out of pure curiosity.", # Fixed string literal
     "Never have I ever stayed up all night on Discord and then had to pretend I got sleep in real life.",
     "Never have I ever sent a risky photo or video to someone I only knew from Discord.",
     "Never have I ever created a fake Discord account to snoop on someone.",
@@ -657,7 +657,7 @@ async def imagegenerate(interaction: discord.Interaction, prompt: str):
         print(f"Image generation API request failed: {e}\n{traceback.format_exc()}")
         await interaction.followup.send(f"Failed to generate image. The AI service might be down, unreachable, or your API key is invalid. Error: `{e}`", ephemeral=False)
     except Exception as e:
-        print(f"An unexpected error occurred in /imagegenerate: {e}\n{traceback.format_exc()}")
+        print(f"An unexpected error occurred in /imagegenerate: {e}\n{traceback.followup()}")
         await interaction.followup.send("An unexpected error occurred during image generation. Please ensure your prompt is appropriate.", ephemeral=False)
 
 
