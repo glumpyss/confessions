@@ -8,31 +8,31 @@ import traceback
 import aiohttp
 import time
 import random
-from datetime import datetime, timedelta # For uptime calculation
+from datetime import datetime, timedelta
 
 # Load environment variables from .env file (for local development)
+# This line should be present for local testing, but Railway handles environment variables directly.
 load_dotenv()
 
 # --- Bot Configuration ---
-DISCORD_BOT_TOKEN = os.getenv('DISCORD_TOKEN')
-CONFESSIONS_CHANNEL_ID = 1383079469958566038
+# All sensitive configurations MUST be loaded from environment variables.
+# For Railway, these are set in your project's "Variables" tab.
+DISCORD_BOT_TOKEN = os.getenv('DISCORD_TOKEN') # Ensure your Railway variable is named DISCORD_TOKEN
+CONFESSIONS_CHANNEL_ID = int(os.getenv('CONFESSIONS_CHANNEL_ID', '1383079469958566038')) # Default if not set, but prefer explicit config
 
 # --- API Configuration ---
 GAG_STOCK_API_URL = "https://growagardenapi.vercel.app/api/stock/GetStock"
 
-# --- API Keys for external services ---
-# FOR CURRENCY CONVERSION: Get your API key from https://www.exchangerate-api.com/
-CURRENCY_API_KEY = os.getenv("CURRENCY_API_KEY", "3293ffb3b5d2c2b66b204e1f ") 
-CURRENCY_API_URL = f"https://v6.exchangerate-api.com/v6/{CURRENCY_API_KEY}/latest/USD" 
+# --- API Keys for external services (ALL LOADED FROM ENVIRONMENT VARIABLES) ---
+# You MUST set these environment variables in your Railway project settings.
+# Do NOT hardcode actual keys here.
+CURRENCY_API_KEY = os.getenv("CURRENCY_API_KEY") 
+IMAGE_GEN_API_KEY = os.getenv("IMAGE_GEN_API_KEY") 
+FORTNITE_API_KEY = os.getenv("FORTNITE_API_KEY")
 
-# FOR IMAGE GENERATION: Get your API key from a service like Stability AI (https://platform.stability.ai/) or OpenAI DALL-E.
-# Replace with your chosen API's base URL and your key.
-IMAGE_GEN_API_KEY = os.getenv("IMAGE_GEN_API_KEY", "sk-4HLrpWeV4ilP9kdp5nLRQijFrp27wT5xIguxd176Mrk09ofJ") 
-# Example Stability AI (SDXL) endpoint, check their latest documentation for exact URL and payload:
+# Example Stability AI (SDXL) endpoint - keep this as a string, no key needed in URL
 IMAGE_GEN_API_URL = "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v0-9/text-to-image" 
 
-# FOR FORTNITE STATS: Get your API key from Fortnite-API.com (https://fortnite-api.com/)
-FORTNITE_API_KEY = os.getenv("FORTNITE_API_KEY", "YOUR_FORTNITE_API_KEY")
 
 # --- Bot Setup ---
 intents = discord.Intents.default()
@@ -47,7 +47,7 @@ bot_banned_users = set()
 # In-memory storage for social links (resets on bot restart)
 user_social_links = {} # {user_id: {platform: link}}
 
-# Lists for fun commands
+# Lists for fun commands - these can stay directly in code as they're not sensitive
 TRUTHS = [
     "What's the most embarrassing thing you've ever worn?",
     "What's a secret talent you have?",
@@ -66,7 +66,7 @@ TRUTHS = [
     "What's the most time you've ever spent on Discord in a single day, and what were you avoiding in real life?",
     "What's one thing you've done in real life that was directly influenced by a dare or challenge from Discord?",
     "What's the most personal secret you've accidentally revealed in a Discord voice chat?",
-    "What's one Discord server you joined purely out of FOMO Fear Of Missing Out and then immediately regretted?",
+    "What's one Discord server you joined purely out of FOMO (Fear Of Missing Out) and then immediately regretted?",
     "What's a Discord profile picture or bio you've had that you now deeply regret?",
     "Have you ever blocked someone on Discord in real life, or vice versa, because of something that happened online?",
     "What's the most outrageous lie you've ever told about yourself on a Discord profile or in a server?",
@@ -83,7 +83,7 @@ DARES = [
     "Post a picture of your pet (or a funny animal picture) in chat.",
     "Try to say your username backwards 3 times fast.",
     "Give a random user a compliment.",
-    "Tell Summer hes a sexy young man",
+    "Tell Summer hes a sexy young man", # This one is very specific, you might want to generalize it
     "Send a screenshot of your phone's home screen",
     "Tell us your go-to karaoke song.",
     "Post a picture of your shoes.",
@@ -101,10 +101,10 @@ DARES = [
     "Make a funny face during a Discord video call (if applicable).",
     "Write a 1-sentence synopsis of your favorite Discord bot's purpose.",
     "Ping the bot's developer in a public channel and tell them a random fact.",
-    "Change your Discord bio to "Powered by Lonelyy!" for 30 minutes.",
+    "Change your Discord bio to \"Powered by Lonelyy!\" for 30 minutes.", # Fixed quotes
     "Send a message that only contains Discord emoji reactions.",
     "List all the bots in the server in reverse alphabetical order.",
-    "Say Latency is love, latency is life five times fast in a voice chat.",
+    "Say \"Latency is love, latency is life\" five times fast in a voice chat.", # Fixed quotes
     "Post a picture of your favorite Discord emote that isn't from this server.",
     "Share the first message you ever sent in this server.",
     "Send a screenshot of your Discord friend list (blurring names).",
@@ -116,15 +116,15 @@ DARES = [
     "Write a mini-story (3 sentences) about a lost message in a Discord channel.",
     "Reveal your least favorite Discord server you've been in.",
     "Change your server nickname to a common Discord error message for 5 minutes.",
-    "Send a message using only Discord system messages (e.g., "User joined the call").",
+    "Send a message using only Discord system messages (e.g., \"User joined the call\").",
     "Tell us your favorite Discord custom status.",
-    "Act out the connecting to voice sound in voice chat.",
+    "Act out the connecting to voice sound in voice chat.", # Consider making this more descriptive
     "Describe your biggest Discord pet peeve in three words.",
     "Tell us your least favorite Discord feature.",
     "Post a picture of your longest active Discord thread.",
     "Recommend a Discord server you genuinely love.",
     "Invent a new Discord permission and describe its use.",
-    "Try to say Slash commands are super swift with a mouthful of marshmallows (if you have them).",
+    "Try to say \"Slash commands are super swift\" with a mouthful of marshmallows (if you have them).", # Fixed quotes
     "Write a review for an imaginary Discord bot feature.",
     "Explain the difference between a guild and a server in Discord in 10 words or less.",
     "Show us your best typing... impression.",
@@ -550,7 +550,8 @@ async def currencyconvert(interaction: discord.Interaction, amount: float, from_
 
     await interaction.response.defer(ephemeral=False)
 
-    if not CURRENCY_API_KEY or CURRENCY_API_KEY == "YOUR_CURRENCY_API_KEY":
+    # Check if API key is properly configured
+    if not CURRENCY_API_KEY:
         return await interaction.followup.send("Currency conversion API key is not configured. Please contact the bot owner.", ephemeral=True)
 
     try:
@@ -558,6 +559,7 @@ async def currencyconvert(interaction: discord.Interaction, amount: float, from_
         to_currency = to_currency.upper()
 
         # The API URL uses the from_currency as the base for rates
+        # Construct the URL with the API key loaded from environment variable
         api_url = f"https://v6.exchangerate-api.com/v6/{CURRENCY_API_KEY}/latest/{from_currency}"
         
         async with aiohttp.ClientSession() as session:
@@ -597,8 +599,11 @@ async def imagegenerate(interaction: discord.Interaction, prompt: str):
 
     await interaction.response.defer(ephemeral=False)
 
-    if not IMAGE_GEN_API_KEY or IMAGE_GEN_API_KEY == "YOUR_IMAGE_GEN_API_KEY" or not IMAGE_GEN_API_URL.startswith("http"):
-        return await interaction.followup.send("Image generation API is not configured. Please contact the bot owner.", ephemeral=True)
+    # Check if API key and URL are properly configured
+    if not IMAGE_GEN_API_KEY:
+        return await interaction.followup.send("Image generation API key is not configured. Please contact the bot owner.", ephemeral=True)
+    if not IMAGE_GEN_API_URL.startswith("http"):
+         return await interaction.followup.send("Image generation API URL is not properly set. Please contact the bot owner.", ephemeral=True)
 
     try:
         # Headers and payload need to match your chosen Image Generation API's documentation
@@ -770,7 +775,7 @@ async def roblox(interaction: discord.Interaction, username: str):
                 user_id_data = await response.json()
                 
                 if not user_id_data or not user_id_data.get('data'):
-                    return await interaction.followup.send(f"Could not find Roblox user **{username}**. Please check the spelling.", ephemeral=False)
+                    return await interaction.followup.send(f"Could not find Roblox user **{username}**.", ephemeral=False)
                 
                 roblox_user_id = user_id_data['data'][0]['id']
                 roblox_display_name = user_id_data['data'][0].get('displayName', username)
@@ -818,7 +823,7 @@ async def roblox(interaction: discord.Interaction, username: str):
 
     except aiohttp.ClientResponseError as e:
         if e.status == 404:
-            await interaction.followup.send(f"Roblox user **{username}** not found. Please check the spelling.", ephemeral=False)
+            await interaction.followup.send(f"Roblox user **{username}** not found.", ephemeral=False)
         else:
             print(f"Roblox API error (status {e.status}): {e}\n{traceback.format_exc()}")
             await interaction.followup.send(f"An error occurred while fetching Roblox profile: HTTP Status {e.status}.", ephemeral=False)
@@ -840,8 +845,9 @@ async def fortnite(interaction: discord.Interaction, username: str):
     if await is_bot_banned(interaction): return
     await interaction.response.defer(ephemeral=False)
 
-    if not FORTNITE_API_KEY or FORTNITE_API_KEY == "YOUR_FORTNITE_API_KEY":
-        return await interaction.followup.send("Fortnite Command isnt made yet, please wait.", ephemeral=True)
+    # Check if API key is properly configured
+    if not FORTNITE_API_KEY:
+        return await interaction.followup.send("Fortnite API key is not configured. Please contact the bot owner.", ephemeral=True)
 
     try:
         api_url = f"https://fortnite-api.com/v2/stats/br/v2?name={username}"
@@ -946,8 +952,11 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
 
 # --- Run the Bot ---
 if __name__ == "__main__":
-    if DISCORD_BOT_TOKEN is None or DISCORD_BOT_TOKEN == 'YOUR_BOT_TOKEN_HERE':
-        print("ERROR: DISCORD_TOKEN environment variable not set or is default. Please replace 'YOUR_BOT_TOKEN_HERE' with your actual Discord bot token.")
-        print("For local development, create a .env file in the same directory as bot.py with: DISCORD_TOKEN='YOUR_ACTUAL_TOKEN_HERE'")
+    # Check if the Discord bot token is set as an environment variable
+    if DISCORD_BOT_TOKEN is None:
+        print("ERROR: DISCORD_TOKEN environment variable not set.")
+        print("Please set the 'DISCORD_TOKEN' environment variable in your deployment environment (e.g., Railway).")
+        print("For local development, ensure you have a .env file with DISCORD_TOKEN='YOUR_ACTUAL_TOKEN_HERE'")
     else:
+        # This is the correct way to call bot.run():
         bot.run(DISCORD_BOT_TOKEN)
