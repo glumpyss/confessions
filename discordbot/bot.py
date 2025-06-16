@@ -15,7 +15,7 @@ load_dotenv()
 
 # --- Bot Configuration ---
 DISCORD_BOT_TOKEN = os.getenv('DISCORD_TOKEN') # Using DISCORD_TOKEN as per your environment variable name
-CONFESSIONS_CHANNEL_ID = 1383002144352894990 # Updated to match discord-confession-bot immersive
+CONFESSIONS_CHANNEL_ID = 1383079469958566038 # Updated to match discord-confession-bot immersive
 
 # --- YTDLP Options for Music Playback ---
 YTDL_OPTIONS = {
